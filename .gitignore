@@ -1,0 +1,28 @@
+# Arquivo .gitignore (na pasta raiz 'Aplicativo-Oncologico')
+
+# --- Arquivos de Segredos (NUNCA ENVIAR) ---
+# O .env que vamos criar para o backend
+backend/.env
+frontend/.env
+
+# --- Arquivos de IDE e OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Backend (Python/Django) ---
+backend/__pycache__/
+backend/*.pyc
+# Se você criar um 'venv' local futuramente
+backend/venv/
+backend/env/
+# Se você usar o sqlite para testes
+backend/db.sqlite3
+
+# --- Frontend (Node/Expo) ---
+frontend/node_modules/
+frontend/.expo/
+frontend/npm-debug.log*
+frontend/yarn-error.log*
+frontend/.web-build/
