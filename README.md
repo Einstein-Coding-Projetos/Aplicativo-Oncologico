@@ -1,64 +1,70 @@
-# Assistência Psicológica para Pacientes Oncológicos
-
+# Aplicativo de Assistência Psicológica para Pacientes Oncológicos
 ## Descrição
+O Aplicativo de Assistência Psicológica para Pacientes Oncológicos tem como objetivo oferecer um ambiente digital Por meio de uma interface intuitiva e empática, o app permite o registro diário de sentimentos, acompanhamento psic---
+## Funcionalidades Principais
+- Diário do Paciente — Registro de sentimentos, progresso e experiências diárias (texto e mídias).
+- Agendamento com Psicólogos — Sistema de agendamento com profissionais especializados no cuidado de pacien- Chatbot de IA — Assistente virtual com base em literatura científica, oferecendo respostas validadas e seguras.
+- Relatos de Casos — Espaço para compartilhar experiências e promover apoio emocional entre pacientes.
+- Motivação Diária — Sistema gamificado de recompensas e notificações, inspirado no modelo de streaks do Duoling- Cadastro e Login — Autenticação segura e individualizada para pacientes e psicólogos.
+- Banco de Dados Relacional — Backend em Django com PostgreSQL, garantindo segurança e integridade dos dado
 
-O **Aplicativo de Assistência Psicológica para Pacientes Oncológicos** visa proporcionar um ambiente digital acolhedor e eficiente para pacientes em tratamento oncológico. Através de uma interface amigável e interativa, o app permite o registro diário de sentimentos, tratamento e experiências dos pacientes. Além disso, oferece funcionalidades de acompanhamento psicológico com psicólogos, chatbot inteligente para esclarecimento de dúvidas com base em artigos científicos, e recursos motivacionais para incentivar o uso diário.
+## Tecnologias Utilizadas
+| Camada | Tecnologias |
+|--------|--------------|
+| Frontend | React Native, Expo |
+| Backend | Django, Django REST Framework |
+| Banco de Dados | PostgreSQL |
+| IA (Chatbot) | Integração com API generativa terceirizada |
+| Controle de Versão | Git + GitHub Projects |
+| Documentação | Markdown, Notion, Figma |
 
-### Funcionalidades principais:
-
-- **Diário de Paciente**: O paciente pode registrar seus sentimentos, progresso e experiências diárias, incluindo input de texto e mídias.
-- **Agendamento com Psicólogos**: Facilita o agendamento de consultas com psicólogos especializados no cuidado de pacientes oncológicos.
-- **Chatbot de IA**: Um assistente virtual treinado com artigos científicos, projetado para responder perguntas de maneira precisa e validar informações.
-- **Relatos de Casos**: Uma seção com relatos de pacientes que passaram por experiências similares, oferecendo apoio emocional.
-- **Motivação Diária**: O app utiliza uma lógica gamificada semelhante ao Duolingo, com feedbacks e recompensas diárias para estimular o uso contínuo.
-- **Cadastro e Login**: Sistema de login e registro de novos usuários.
-- **Banco de Dados Relacional**: O backend será desenvolvido com Django, garantindo um gerenciamento eficiente dos dados dos pacientes.
-
-## Tecnologias
-
-- **Frontend**: React Native, Expo (para otimizar o desenvolvimento e facilitar o uso de APIs)
-- **Backend**: Django (provável)
-- **Banco de Dados**: Relacional (provavelmente PostgreSQL ou MySQL)
-- **Inteligência Artificial**: Chatbot de IA generativa (terceirizado)
-
-## Como rodar o projeto
-
+## Como Rodar o Projeto
 ### Pré-requisitos
+- Node.js ≥ 20
+- npm ou yarn
+- Python ≥ 3.11
+- PostgreSQL ≥ 15
+- Expo Go (emulador ou app mobile)
+- Git
 
-- Node.js
-- Expo CLI (caso não tenha instalado, você pode instalar com o comando `npm install -g expo-cli`)
-- React Native CLI
-- Python (para o backend)
-- Django (para o backend)
-
-### Instalação do Frontend com Expo
-
-1. Clone este repositório.
-2. Navegue até o diretório do projeto.
-3. Instale as dependências com o comando: 'npm install'
-4. Inicie o projeto com Expo: 'expo start'
-
-O comando acima abrirá o projeto no navegador, e você pode ver o app no seu dispositivo móvel usando o **Expo Go**.
+### Instalação do Frontend
+- Clone o repositório
+  - git clone (url-do-repo-frontend)
+- Entre no diretório
+  - cd app-onco-frontend
+- Instale as dependências
+  - npm install
+- Inicie o servidor Expo
+  - npx expo start (Abra o app Expo Go no celular e escaneie o QR Code gerado no terminal para visualizar o aplicativo.)
 
 ### Instalação do Backend
+- Clone o repositório
+  - git clone (url-do-repo-backend)
+- Entre no diretório
+  - cd app-onco-backend
+- Crie e ative um ambiente virtual
+  - python -m venv venv
+- Windows
+  - venv\Scripts\activate
+- macOS/Linux
+  - source venv/bin/activate
+- Instale as dependências
+  - pip install -r requirements.txt
 
-1. Clone o repositório do backend.
-2. Navegue até o diretório do backend.
-3. Crie e ative um ambiente virtual.
-4. Instale as dependências com o comando: 'pip install -r requirements.txt'
-5. Configure o banco de dados **PostgreSQL**. Certifique-se de criar o banco de dados com o nome especificado no arquivo de configuração do Django (geralmente no `settings.py`).
-6. Aplique as migrações para criar as tabelas no banco de dados: 'python manage.py migrate'
+## Estrutura de Desenvolvimento
+Branches principais:
+- main: versão estável (produção)
+- dev: desenvolvimento ativo
+- feature/*: novas funcionalidades
+Padrão de commits:
+feat, fix, docs, chore
 
 ## Contribuindo
-
-Contribuições são bem-vindas! Siga estas etapas para contribuir:
-
-1. Faça um fork deste repositório.
-2. Crie uma branch para suas modificações.
-3. Faça commit das suas mudanças.
-4. Envie para o repositório remoto.
-5. Abra um pull request.
-
+1. Faça um fork do projeto
+2. Crie uma branch: feature/nome-da-feature
+3. Faça commit e push
+4. Abra um Pull Request para dev
+---
 ## Licença
-
-Este projeto é licenciado sob a [Licença MIT](LICENSE).
+Projeto sob Licença MIT.
+Sinta-se à vontade para contribuir.
