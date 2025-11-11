@@ -1,86 +1,80 @@
-# Guia de Rotina de Desenvolvimento
+#  Guia de Fluxo de Trabalho (Rotina Diária)
 
-Este guia é para membros da equipe que **já passaram pela configuração inicial** e estão voltando para editar o código.
-
-## 1. 🏁 Pré-requisito: Verifique o PostgreSQL
-
-Antes de abrir o código, garanta que o seu servidor de banco de dados PostgreSQL está em execução.
-
-1.  Abra o painel "Serviços" do Windows (`Win + R`, digite `services.msc`).
-2.  Procure por `postgresql-x64-XX` (ex: `postgresql-x64-17`).
-3.  Se o "Status" não for "Em Execução", clique com o botão direito e selecione **"Iniciar"**.
-
-* (Na maioria das instalações, este serviço inicia automaticamente com o Windows).
+Este guia é para membros da equipe que **já passaram pela configuração inicial** e estão voltando ao projeto para codificar.
 
 ---
 
-## 2. 🚀 Iniciando o Backend (Django)
+## 1. 🏁 Início: Sincronizar e Verificar
 
-Para ligar o servidor da API.
+Antes de abrir o código, sincronize seu repositório local com o do GitHub e garanta que o banco de dados esteja no ar.
 
-1.  **Abra o Terminal** e navegue até a pasta do backend:
+1.  **Abra o Terminal** na pasta **raiz** do projeto (`Aplicativo-Oncologico`).
+
+2.  **Puxe as Atualizações (Pull):**
+    Baixe as últimas alterações feitas pela equipe.
+
     ```bash
-    cd caminho/para/Aplicativo-Oncologico/backend
+    git pull
     ```
 
-2.  **Ative o Ambiente Python:**
+3.  **Verifique o Serviço do PostgreSQL:**
+    * Abra o "Serviços" do Windows (Pressione `Win + R` e digite `services.msc`).
+    * Encontre `postgresql-x64-XX` na lista.
+    * Se o "Status" não for "Em Execução", clique com o botão direito e selecione **"Iniciar"**.
+
+---
+
+## 2. 🚀 Executando o Backend (Django)
+
+1.  **Navegue e Ative:**
+    (No seu terminal, a partir da pasta raiz)
+
     ```bash
+    cd backend
     mamba activate apponco
     ```
 
-3.  **(Recomendado) Atualize o Código:**
-    Garanta que você tem a versão mais recente do código-fonte.
-    ```bash
-    git pull origin dev
-    ```
-    *(Ou qualquer que seja sua branch principal de desenvolvimento).*
+2.  **Atualize as Dependências:**
+    (Se o `git pull` alterou o `requirements.txt`, este comando instalará os novos pacotes. É seguro rodar de qualquer forma).
 
-4.  **(Se houver mudanças) Instale/Atualize Pacotes:**
-    Se o `git pull` atualizou o arquivo `requirements.txt`:
     ```bash
     pip install -r requirements.txt
     ```
 
-5.  **(Se houver mudanças) Atualize o Banco de Dados:**
-    Se o `git pull` atualizou os `models.py` (ou seja, houver novas "migrations"):
+3.  **Aplique as Migrações:**
+    (Se o `git pull` alterou os `models.py`, este comando atualizará o banco de dados. É seguro rodar de qualquer forma).
+
     ```bash
     python manage.py migrate
     ```
 
-6.  **Inicie o Servidor:**
+4.  **Inicie o Servidor:**
     ```bash
     python manage.py runserver
     ```
-    *O backend estará rodando em `http://127.0.0.1:8000/`*
+    *Deixe este terminal rodando. O backend estará no ar em `http://127.0.0.1:8000/`.*
 
 ---
 
-## 3. 📱 Iniciando o Frontend (React Native)
+## 3. 📱 Executando o Frontend (Expo)
 
-Para visualizar o aplicativo no seu celular.
+1.  **Abra um *Novo Terminal***.
 
-1.  **Abra um *Novo Terminal*** (deixe o backend rodando).
-2.  Navegue até a pasta do frontend:
+2.  **Navegue:**
+    (No novo terminal, a partir da pasta raiz)
     ```bash
-    cd caminho/para/Aplicativo-Oncologico/app-onco-frontend
+    cd frontend
     ```
 
-3.  **(Recomendado) Atualize o Código:**
-    ```bash
-    git pull origin dev
-    ```
+3.  **Atualize as Dependências:**
+    (Se o `git pull` alterou o `package.json`, este comando instalará os novos pacotes. É seguro rodar de qualquer forma).
 
-4.  **(Se houver mudanças) Instale/Atualize Pacotes:**
-    Se o `git pull` atualizou o arquivo `package.json`:
     ```bash
     npm install
     ```
 
-5.  **Inicie o Expo:**
+4.  **Inicie o Expo:**
     ```bash
     npx expo start
     ```
-    *Isso abrirá uma aba no navegador com um QR Code.*
-
-6.  **Visualize o App:**
-    Abra o aplicativo **Expo Go** no seu celular e escaneie o QR Code.
+    *Escaneie o QR Code com o app **Expo Go** no seu celular.*
