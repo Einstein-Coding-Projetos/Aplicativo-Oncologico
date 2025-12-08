@@ -1,11 +1,11 @@
 import { View, Text, StyleSheet } from "react-native";
 
-export default function HomeScreen() {
+export default function PerfilScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Home - Em construcao</Text>
+      <Text style={styles.title}>Tela de Usuario - Em construcao</Text>
       <Text style={styles.subtitle}>
-        Bem-vinda(o) ao apoio psicologico oncologico.
+        Area de perfil sera configurada posteriormente.
       </Text>
     </View>
   );
@@ -20,14 +20,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "700",
     color: "#1f7a8c",
     marginBottom: 8,
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: "#5c6b73",
     textAlign: "center",
   },
