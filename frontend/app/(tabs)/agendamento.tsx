@@ -1,12 +1,27 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Button } from "react-native";
+
+
+// Importe o router do expo-router
+import { router } from "expo-router"; 
 
 export default function AgendamentoScreen() {
+  
+  // Função para navegar
+  const handleNavigation = () => {
+    // O nome da rota é o nome do arquivo que criamos no Passo A (sem o .js)
+    router.push("../screens/PsicologoScreen"); 
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tela de Agendamento - Em construcao</Text>
-      <Text style={styles.subtitle}>
-        Organize consultas e lembretes de cuidados.
-      </Text>
+      <Text style={styles.title}>Tela de Agendamento</Text>
+      
+      <Text style={styles.subtitle}>Consultas agendadas:</Text>
+
+      <Button
+        title="Agendar nova consulta"
+        onPress={handleNavigation} 
+      />
     </View>
   );
 }
