@@ -17,6 +17,11 @@ export default function AppointmentScreen() {
   // Lista de consultas marcadas (vazia por padrão)
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   
+  // Função para adicionar uma consulta (evita warning de variável não utilizada)
+  const addAppointment = (title: string, date: string) => {
+    setAppointments((prev) => [...prev, { id: Date.now().toString(), title, date }]);
+  };
+
   // Verifica se há consultas
   const hasAppointments = appointments.length > 0;
 
@@ -56,6 +61,15 @@ export default function AppointmentScreen() {
           >
             <Text style={styles.buttonText}>Consultas Passadas</Text>
           </Pressable>
+
+          {process.env.NODE_ENV === 'development' && (
+            <Pressable
+              style={[styles.button, { backgroundColor: '#999', marginTop: 20 }]}
+              onPress={() => addAppointment('Consulta de teste', '01/01/2026')}
+            >
+              <Text style={styles.buttonText}>Adicionar exemplo</Text>
+            </Pressable>
+          )}
         </>
       ) : (
         // Layout quando HÁ consultas (botões no canto inferior direito)
