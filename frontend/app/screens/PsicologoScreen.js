@@ -4,32 +4,40 @@ import React from 'react';
 import { View, Text, StyleSheet, Button } from "react-native";
 import { router } from "expo-router";
 import PsicologosList from '../../components/PsicologosList';
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 
 export default function PsicologosScreen() {
 // Função para navegar
   const handleNavigation = () => {
     router.push("../(tabs)/agendamento"); 
+  
   };
-
+  
   return (
-    <View style={styles.container}>
-    <Button
-            title="Voltar"
-            onPress={handleNavigation} 
+    <SafeAreaView style={styles.containerExterno}>
+      <View style={styles.conteinerInterno}>
+      <View style={styles.button}> 
+      <Button
+              title="Voltar"
+              onPress={handleNavigation} 
           />
+          </View>
       <Text style={styles.title}>Lista de Psicólogos - Em construção</Text>
-      <View style={styles.subtitle}>
+      <View style={styles.subtitulo}>
         <Text>Selecionar as seguintes opções:</Text>
         <PsicologosList/>
       </View>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: 'center', alignItems: 'center' },
+  containerExterno: { flex: 1, padding: 20, backegroundcolor:'#fff' },
   title: { fontSize: 20, fontWeight: 'bold' },
-  subtitle: { marginTop: 10 }
+  button: {alignSelf: 'flex-start', marginBottom:20},
+  conteinerInterno: {flex:1, paddingHorizontal: 20 },
+  subtitulo: {flex:1, marginTop:21}
 });
 

@@ -1,14 +1,9 @@
 import { View, Text, StyleSheet, Button } from "react-native";
-
-
-// Importe o router do expo-router
 import { router } from "expo-router"; 
 
 export default function AgendamentoScreen() {
   
-  // Função para navegar
   const handleNavigation = () => {
-    // O nome da rota é o nome do arquivo que criamos no Passo A (sem o .js)
     router.push("../screens/PsicologoScreen"); 
   };
 

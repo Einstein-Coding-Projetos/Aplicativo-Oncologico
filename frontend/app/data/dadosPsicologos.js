@@ -4,7 +4,7 @@ export const dadosPsicologos = [
     nome: 'Dra. Helena Martins',
     especialidade: 'Psico-oncologia',
     descricao: 'Especialista em apoio emocional durante o tratamento de quimioterapia.',
-    dias: 'Segunda e Quarta',
+    dias: ['Segunda', 'Quarta'],
     horarios: ['08:00', '10:00', '14:30']
   },
   {
@@ -12,7 +12,7 @@ export const dadosPsicologos = [
     nome: 'Dr. Ricardo Alves',
     especialidade: 'Terapia Familiar',
     descricao: 'Foco no suporte aos familiares e cuidadores do paciente oncológico.',
-    dias: 'Terça e Quinta',
+    dias: ['Terça' , 'Quinta'],
     horarios: ['09:00', '11:00', '15:00', '17:00']
   },
   {
@@ -20,7 +20,7 @@ export const dadosPsicologos = [
     nome: 'Dra. Patrícia Lima',
     especialidade: 'Terapia Cognitivo-Comportamental',
     descricao: 'Auxílio no controle de ansiedade e depressão pós-diagnóstico.',
-    dias: 'Sexta-feira',
+    dias: ['Sexta-feira'],
     horarios: ['13:00', '14:00', '15:00']
   },
   {
@@ -28,7 +28,7 @@ export const dadosPsicologos = [
     nome: 'Dr. Lucas Ferreira',
     especialidade: 'Cuidados Paliativos',
     descricao: 'Acompanhamento humanizado em estágios avançados.',
-    dias: 'Segunda, Terça e Quarta',
+    dias: ['Segunda', 'Terça' , 'Quarta'],
     horarios: ['08:30', '09:30', '10:30']
   },
   {
@@ -36,7 +36,7 @@ export const dadosPsicologos = [
     nome: 'Dra. Sofia Mendes',
     especialidade: 'Psicologia Infantil',
     descricao: 'Atendimento lúdico para crianças em tratamento oncológico.',
-    dias: 'Quinta-feira',
+    dias: ['Quinta-feira'],
     horarios: ['14:00', '15:30', '16:45']
   }
 ];
