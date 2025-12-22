@@ -79,13 +79,7 @@ export default function TabsLayout() {
         }}
       />
       
-      <Tabs.Screen
-        name="appoitment"
-        options={{
-          title: 'Appointments',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar.circle.fill" color={color} />,
-        }}
-      />
+
     </Tabs>
   );
 }
