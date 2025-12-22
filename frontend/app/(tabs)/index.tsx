@@ -9,7 +9,7 @@ import { router } from 'expo-router';
 export default function HomeScreen() {
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+      headerBackgroundColor={{ light: '#C7D2FE', dark: '#1e1b4b' }}
       headerImage={
         <Image
           source={require('@/assets/images/partial-react-logo.png')}
@@ -30,24 +30,24 @@ export default function HomeScreen() {
 
       <View style={styles.actionsContainer}>
         <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(tabs)/diario')}>
-          <View style={[styles.iconBox, { backgroundColor: '#e0f2fe' }]}>
-            <Ionicons name="book" size={32} color="#0284c7" />
+          <View style={[styles.iconBox, { backgroundColor: '#EEF2FF' }]}>
+            <Ionicons name="book" size={32} color="#5E60CE" />
           </View>
           <ThemedText type="subtitle" style={styles.cardTitle}>Diário</ThemedText>
           <ThemedText style={styles.cardText}>Registre como você se sente hoje.</ThemedText>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(tabs)/agendamento')}>
-           <View style={[styles.iconBox, { backgroundColor: '#f0fdf4' }]}>
-            <Ionicons name="calendar" size={32} color="#16a34a" />
+           <View style={[styles.iconBox, { backgroundColor: '#E0F2FE' }]}>
+            <Ionicons name="calendar" size={32} color="#4EA8DE" />
           </View>
           <ThemedText type="subtitle" style={styles.cardTitle}>Agendar</ThemedText>
           <ThemedText style={styles.cardText}>Marque consultas com psicólogos.</ThemedText>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(tabs)/relatos')}>
-           <View style={[styles.iconBox, { backgroundColor: '#faf5ff' }]}>
-            <Ionicons name="chatbubbles" size={32} color="#9333ea" />
+           <View style={[styles.iconBox, { backgroundColor: '#F3E8FF' }]}>
+            <Ionicons name="chatbubbles" size={32} color="#6930C3" />
           </View>
           <ThemedText type="subtitle" style={styles.cardTitle}>Relatos</ThemedText>
           <ThemedText style={styles.cardText}>Leia histórias inspiradoras.</ThemedText>

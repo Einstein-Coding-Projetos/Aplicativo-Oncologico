@@ -5,10 +5,10 @@ import { Platform } from 'react-native';
 import { HapticTab } from '@/components/haptic-tab';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-const activeTint = "#1f7a8c"; // teal/blue health tone
-const inactiveTint = "#5c6b73";
-const tabBackground = "#f4f9fb";
-const borderColor = "#d9e3ea";
+const activeTint = "#4338ca";
+const inactiveTint = "#6B7280";
+const tabBackground = "#ffffff";
+const borderColor = "#E5E7EB";
 
 export default function TabsLayout() {
   const colorScheme = useColorScheme();

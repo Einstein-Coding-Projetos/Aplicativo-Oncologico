@@ -49,7 +49,7 @@ export default function DiarioScreen() {
       <TextInput
         style={styles.input}
         placeholder="Escreva aqui como foi seu dia..."
-        placeholderTextColor="#4A6FA5"
+        placeholderTextColor="#9CA3AF"
         multiline
         value={texto}
         onChangeText={setTexto}
@@ -74,32 +74,44 @@ export default function DiarioScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#D7EAFE',
+    backgroundColor: '#F8F9FA',
     padding: 20,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 20,
   },
   titulo: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1A3B5D',
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1F2937',
   },
   input: {
     backgroundColor: 'white',
     padding: 15,
-    borderRadius: 12,
+    borderRadius: 16,
     height: 200,
     textAlignVertical: 'top',
     fontSize: 16,
     marginBottom: 20,
+    color: '#1F2937',
+    // Shadow matching Perfil cards
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 2,
   },
   botao: {
-    backgroundColor: '#4A90E2',
-    padding: 15,
-    borderRadius: 12,
+    backgroundColor: '#4338ca',
+    padding: 16,
+    borderRadius: 16,
     alignItems: 'center',
+    shadowColor: "#4338ca",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   botaoTexto: {
     color: 'white',
@@ -108,17 +120,24 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 15,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 5,
+    elevation: 2,
   },
   data: {
     fontWeight: 'bold',
     marginBottom: 5,
-    color: '#1A3B5D',
+    color: '#4F46E5',
+    fontSize: 14,
   },
   conteudo: {
     fontSize: 16,
-    color: '#333',
+    color: '#374151',
+    lineHeight: 24,
   },
 });
