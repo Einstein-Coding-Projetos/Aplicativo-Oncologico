@@ -2,7 +2,7 @@ import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Platform } from 'react-native';
-import { HapticTab } from '@/components/HapticTab';
+import { HapticTab } from '@/components/haptic-tab';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 const activeTint = "#1f7a8c"; // teal/blue health tone
