@@ -1,5 +1,6 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 const activeTint = "#1f7a8c"; // teal/blue health tone
 const inactiveTint = "#5c6b73";
@@ -65,6 +66,13 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-circle" color={color} size={size} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="appoitment"
+        options={{
+          title: 'Appointments',
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="calendar.circle.fill" color={color} />,
         }}
       />
     </Tabs>
