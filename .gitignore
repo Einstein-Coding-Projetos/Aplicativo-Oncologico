@@ -26,3 +26,7 @@ frontend/.expo/
 frontend/npm-debug.log*
 frontend/yarn-error.log*
 frontend/.web-build/
+
+__pycache__/
+**/__pycache__/
+**/*.pyc

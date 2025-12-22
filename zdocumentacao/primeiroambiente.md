@@ -76,14 +76,15 @@ pip install -r requirements.txt
 ### 4. 🔐 Crie o Arquivo .env de Segurança:
 - O arquivo backend/.env (que contém os segredos) não está no Git. Você deve criá-lo manualmente.
 - Crie um novo arquivo chamado .env dentro da pasta backend.
-- Cole o seguinte conteúdo dentro dele, atualizando com seus dados:
+- Cole o seguinte conteúdo dentro dele, atualizando com seus dados (use os mesmos nomes/credenciais que criou no Passo 2.2):
 
-```Ini, TOML
-# Conteúdo para backend/.env
-# Use a senha que VOCÊ definiu no Passo 2.2
-DATABASE_PASSWORD=uma-senha-forte-para-o-dev
-# Peça a SECRET_KEY para o líder da equipe (ela é compartilhada)
-SECRET_KEY='cole-a-secret-key-do-time-aqui'
+```env
+SECRET_KEY=cole-a-secret-key-do-time-aqui
+DB_NAME=apponco_db
+DB_USER=apponco_user
+DB_PASSWORD=uma-senha-forte-para-o-dev
+DB_HOST=localhost
+DB_PORT=5432
 ```
 
 ### 5. 🚀 Rode as Migrações: (Ainda na pasta backend com o ambiente apponco ativado)
