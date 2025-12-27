@@ -1,26 +1,46 @@
 import random
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
+from datetime import date
+from django.http import JsonResponse
 from .models import RelatoCaso
-from .serializers import RelatoCasoSerializer
 
-@api_view(["GET"])
-def relato_aleatorio(request):
-    relatos_disponiveis = RelatoCaso.objects.filter(
+def relato_do_dia(request):
+    hoje = date.today()
+
+    # 1️⃣ Já existe relato escolhido hoje?
+    relato_hoje = RelatoCaso.objects.filter(
         ativo=True,
-        ja_exibido=False
+        exibido_em=hoje
+    ).first()
+
+    if relato_hoje:
+        return JsonResponse({
+            "id": relato_hoje.id,
+            "titulo": relato_hoje.titulo,
+            "subtitulo": relato_hoje.subtitulo,
+            "texto": relato_hoje.texto,
+            "data": str(hoje),
+        })
+
+    # 2️⃣ Se não, escolhe um novo
+    relatos_disponiveis = RelatoCaso.objects.filter(
+        ativo=True
     )
 
     if not relatos_disponiveis.exists():
-        RelatoCaso.objects.filter(ativo=True).update(ja_exibido=False)
-        relatos_disponiveis = RelatoCaso.objects.filter(
-            ativo=True,
-            ja_exibido=False
+        return JsonResponse(
+            {"mensagem": "Nenhum relato disponível"},
+            status=404
         )
 
     relato = random.choice(list(relatos_disponiveis))
-    relato.ja_exibido = True
+
+    relato.exibido_em = hoje
     relato.save()
 
-    serializer = RelatoCasoSerializer(relato)
-    return Response(serializer.data)
+    return JsonResponse({
+        "id": relato.id,
+        "titulo": relato.titulo,
+        "subtitulo": relato.subtitulo,
+        "texto": relato.texto,
+        "data": str(hoje),
+    })
