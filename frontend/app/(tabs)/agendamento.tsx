@@ -4,26 +4,35 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useState } from 'react';
 
+
 interface Appointment {
   id: string;
   title: string;
   date: string;
 }
 
+
 export default function AgendamentoScreen() {
   const colorScheme = useColorScheme();
   const router = useRouter();
-  
+
+
+  const handleNavigation = () => {
+    router.push("../screens/PsicologoScreen");
+  };
+ 
   // Lista de consultas marcadas (vazia por padrão)
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  
+ 
   // Função para adicionar uma consulta (evita warning de variável não utilizada)
   const addAppointment = (title: string, date: string) => {
     setAppointments((prev) => [...prev, { id: Date.now().toString(), title, date }]);
   };
 
+
   // Verifica se há consultas
   const hasAppointments = appointments.length > 0;
+
 
   const renderAppointment = (item: Appointment) => (
     <View style={[styles.appointmentItem, { borderColor: Colors[colorScheme ?? 'light'].tint }]}>
@@ -36,8 +45,9 @@ export default function AgendamentoScreen() {
     </View>
   );
 
+
   return (
-    <View style={[styles.container, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}> 
+    <View style={[styles.container, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
       {!hasAppointments ? (
         // Layout quando NÃO há consultas (botões centralizados)
         <>
@@ -47,20 +57,22 @@ export default function AgendamentoScreen() {
           <Text style={[styles.subtitle, { color: Colors[colorScheme ?? 'light'].text }]}>
             Gerencie suas consultas médicas aqui
           </Text>
-          
-          <Pressable 
+         
+          <Pressable
             style={[styles.button, { backgroundColor: Colors[colorScheme ?? 'light'].tint }]}
-            onPress={() => router.push('/placeholder')}
+            onPress={handleNavigation}
           >
             <Text style={styles.buttonText}>Novo Agendamento</Text>
           </Pressable>
 
-          <Pressable 
+
+          <Pressable
             style={[styles.button, { backgroundColor: Colors[colorScheme ?? 'light'].tint, marginTop: 20 }]}
             onPress={() => router.push('/consultas_passadas')}
           >
             <Text style={styles.buttonText}>Consultas Passadas</Text>
           </Pressable>
+
 
           {process.env.NODE_ENV === 'development' && (
             <Pressable
@@ -77,7 +89,7 @@ export default function AgendamentoScreen() {
           <Text style={[styles.title, { color: Colors[colorScheme ?? 'light'].text }]}>
             Suas Consultas
           </Text>
-          
+         
           <FlatList
             data={appointments}
             renderItem={({ item }) => renderAppointment(item)}
@@ -86,14 +98,16 @@ export default function AgendamentoScreen() {
             scrollEnabled={true}
           />
 
-          <Pressable 
+
+          <Pressable
             style={[styles.floatingButton, { backgroundColor: Colors[colorScheme ?? 'light'].tint }]}
             onPress={() => router.push('/placeholder')}
           >
             <Text style={styles.floatingButtonText}>+</Text>
           </Pressable>
 
-          <Pressable 
+
+          <Pressable
             style={[styles.floatingButtonSecondary, { backgroundColor: Colors[colorScheme ?? 'light'].tint }]}
             onPress={() => router.push('/consultas_passadas')}
           >
@@ -104,6 +118,7 @@ export default function AgendamentoScreen() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

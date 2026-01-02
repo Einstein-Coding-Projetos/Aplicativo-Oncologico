@@ -22,6 +22,7 @@ from rest_framework_simplejwt.views import (
 )
 from .views import agendar
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
@@ -30,4 +31,7 @@ urlpatterns = [
     path("api/", include("core.urls")),
     path('agendar', agendar, name='agendar'),
 ]
-]
+
+
+
+
