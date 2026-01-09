@@ -2,20 +2,19 @@ import { StyleSheet, Text, View, Pressable, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useState } from 'react';
-
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import api from '@/lib/api';
 
 interface Appointment {
   id: string;
   title: string;
   date: string;
+  status?: string;
 }
-
 
 export default function AgendamentoScreen() {
   const colorScheme = useColorScheme();
   const router = useRouter();
-
 
   const handleNavigation = () => {
     router.push("../screens/PsicologoScreen");
@@ -24,26 +23,88 @@ export default function AgendamentoScreen() {
   // Lista de consultas marcadas (vazia por padrão)
   const [appointments, setAppointments] = useState<Appointment[]>([]);
  
-  // Função para adicionar uma consulta (evita warning de variável não utilizada)
-  const addAppointment = (title: string, date: string) => {
-    setAppointments((prev) => [...prev, { id: Date.now().toString(), title, date }]);
+  // Função para adicionar uma consulta
+  const addAppointment = async (title: string, date: string) => {
+    try {
+      // create on backend
+      const created = await api.createAppointment({ title, date });
+      // update local list
+      setAppointments((prev) => [created, ...prev]);
+    } catch (err) {
+      console.error(err);
+      // fallback: optimistic local add
+      setAppointments((prev) => [{ id: Date.now().toString(), title, date }, ...prev]);
+    }
   };
 
+  const load = useCallback(async () => {
+    try {
+      const data = await api.fetchAppointments();
+      const normalized = data.map((d: any) => ({ ...d, date: new Date(d.date).toISOString() }));
+      setAppointments(normalized.filter((a: any) => a.status !== 'completed'));
+    } catch (err) {
+      console.warn('Failed to load appointments', err);
+    }
+  }, []);
+
+  // Ordena consultas por data (mais próxima primeiro)
+  const sortedAppointments = useMemo(() => {
+    return [...appointments].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [appointments]);
+
+  // carregar do backend ao montar
+  useEffect(() => {
+    load();
+  }, [load]);
 
   // Verifica se há consultas
-  const hasAppointments = appointments.length > 0;
+  const hasAppointments = sortedAppointments.length > 0;
 
+  // Próxima consulta
+  const nextAppointment = sortedAppointments.length > 0 ? sortedAppointments[0] : undefined;
 
-  const renderAppointment = (item: Appointment) => (
-    <View style={[styles.appointmentItem, { borderColor: Colors[colorScheme ?? 'light'].tint }]}>
-      <Text style={[styles.appointmentTitle, { color: Colors[colorScheme ?? 'light'].text }]}>
-        {item.title}
-      </Text>
-      <Text style={[styles.appointmentDate, { color: Colors[colorScheme ?? 'light'].text }]}>
-        {item.date}
-      </Text>
-    </View>
-  );
+  const renderAppointment = ({ item }: { item: Appointment }) => {
+    const isNext = nextAppointment ? item.id === nextAppointment.id : false;
+    const formatted = new Date(item.date).toLocaleString();
+
+    return (
+      <View
+        style={[
+          styles.appointmentItem,
+          { borderColor: Colors[colorScheme ?? 'light'].tint },
+          isNext && styles.nextAppointment,
+        ]}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={[styles.appointmentTitle, { color: Colors[colorScheme ?? 'light'].text }]}>
+            {item.title}
+          </Text>
+          {isNext && <Text style={styles.nextBadge}>Próxima</Text>}
+        </View>
+        <Text style={[styles.appointmentDate, { color: Colors[colorScheme ?? 'light'].text }]}>
+          {formatted}
+        </Text>
+        {/* Show a manual 'Mark completed' button when not completed */}
+        {item.status !== 'completed' && (
+          <Pressable
+            style={[styles.completeButton, { backgroundColor: Colors[colorScheme ?? 'light'].tint, marginTop: 10 }]}
+            onPress={async () => {
+              try {
+                await api.completeAppointment(Number(item.id));
+                // refresh lists
+                await load();
+              } catch (e) {
+                console.warn('Failed to mark completed', e);
+              }
+            }}
+          >
+            <Text style={styles.buttonText}>Marcar como concluída</Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  };
+
 
 
   return (
@@ -77,7 +138,7 @@ export default function AgendamentoScreen() {
           {process.env.NODE_ENV === 'development' && (
             <Pressable
               style={[styles.button, { backgroundColor: '#999', marginTop: 20 }]}
-              onPress={() => addAppointment('Consulta de teste', '01/01/2026')}
+              onPress={() => addAppointment('Consulta de teste', new Date(Date.now() + 24 * 3600 * 1000).toISOString())}
             >
               <Text style={styles.buttonText}>Adicionar exemplo</Text>
             </Pressable>
@@ -91,8 +152,8 @@ export default function AgendamentoScreen() {
           </Text>
          
           <FlatList
-            data={appointments}
-            renderItem={({ item }) => renderAppointment(item)}
+            data={sortedAppointments}
+            renderItem={renderAppointment}
             keyExtractor={(item) => item.id}
             style={styles.appointmentList}
             scrollEnabled={true}
@@ -146,6 +207,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  completeButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
   appointmentList: {
     flex: 1,
     width: '100%',
@@ -166,6 +233,21 @@ const styles = StyleSheet.create({
   appointmentDate: {
     fontSize: 14,
     opacity: 0.7,
+  },
+  nextAppointment: {
+    backgroundColor: 'rgba(31,122,140,0.06)',
+    borderLeftWidth: 4,
+    borderRadius: 8,
+  },
+  nextBadge: {
+    backgroundColor: '#1f7a8c',
+    color: '#fff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    overflow: 'hidden',
+    fontSize: 12,
+    fontWeight: '600',
   },
   floatingButton: {
     position: 'absolute',
