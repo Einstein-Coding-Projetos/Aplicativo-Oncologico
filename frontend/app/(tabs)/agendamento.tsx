@@ -25,16 +25,16 @@ export default function AgendamentoScreen() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
  
   // Função para adicionar uma consulta
-  const addAppointment = async (title: string, date: string) => {
+  const addAppointment = async (profissional: string, date: Date, horario: string, ) => {
     try {
       // create on backend
-      const created = await api.createAppointment({ title, date });
+      const created = await api.createAppointment({ profissional, date, horario});
       // update local list
       setAppointments((prev) => [created, ...prev]);
     } catch (err) {
       console.error(err);
       // fallback: optimistic local add
-      setAppointments((prev) => [{ id: Date.now().toString(), title, date }, ...prev]);
+      setAppointments((prev) => [{ id: Date.now().toString(), profissional, horario, date }, ...prev]);
     }
   };
 
@@ -42,9 +42,9 @@ export default function AgendamentoScreen() {
     try {
       const data = await api.fetchAppointments();
       const normalized = data.map((d: any) => ({ ...d, date: new Date(d.date).toISOString() }));
-      setAppointments(normalized.filter((a: any) => a.status !== 'completed'));
+      setAppointments(normalized.filter((a: any) => a.status !== 'concluido'));
     } catch (err) {
-      console.warn('Failed to load appointments', err);
+      console.warn('Falha em carregar consultas', err);
     }
   }, []);
 
@@ -86,7 +86,7 @@ export default function AgendamentoScreen() {
           {formatted}
         </Text>
         {/* Show a manual 'Mark completed' button when not completed */}
-        {item.status !== 'completed' && (
+        {item.status !== 'concluído' && (
           <Pressable
             style={[styles.completeButton, { backgroundColor: Colors[colorScheme ?? 'light'].tint, marginTop: 10 }]}
             onPress={async () => {
@@ -95,7 +95,7 @@ export default function AgendamentoScreen() {
                 // refresh lists
                 await load();
               } catch (e) {
-                console.warn('Failed to mark completed', e);
+                console.warn('Falha em marcá-lo como concluído', e);
               }
             }}
           >
@@ -139,7 +139,7 @@ export default function AgendamentoScreen() {
           {process.env.NODE_ENV === 'development' && (
             <Pressable
               style={[styles.button, { backgroundColor: '#999', marginTop: 20 }]}
-              onPress={() => addAppointment('Consulta de teste', new Date(Date.now() + 24 * 3600 * 1000).toISOString())}
+              onPress={() => addAppointment('Dr.Consulta teste', new Date(Date.now() + 24 * 3600 * 1000).toISOString(), '09:00')}
             >
               <Text style={styles.buttonText}>Adicionar exemplo</Text>
             </Pressable>
