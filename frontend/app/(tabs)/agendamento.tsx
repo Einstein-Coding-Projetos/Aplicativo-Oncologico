@@ -9,7 +9,8 @@ interface Appointment {
   id: string;
   title: string;
   date: string;
-  status?: string;
+  horario: string;
+  status: string;
 }
 
 export default function AgendamentoScreen() {
