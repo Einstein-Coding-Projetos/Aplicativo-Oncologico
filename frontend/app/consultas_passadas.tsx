@@ -5,7 +5,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import api from '@/lib/api';
 import {"AgendamentoScreen()"} from "@/app/(tabs)/agendamento"
 
-const API_URL = 'http://192.168.0.185:8000'; 
+//colocar seu ip 
+const API_URL = 'http://ip:8000'; 
 
 
 export default function ConsultasPassadas() {

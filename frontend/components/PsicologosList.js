@@ -67,8 +67,9 @@ const PsicologosList = () => {
         horario: horario
     };
 
+    //colocar seu ip
     try {
-        const resposta = await fetch('http://192.168.0.185:8000/agendar', {
+        const resposta = await fetch('http://ip:8000/agendar', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

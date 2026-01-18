@@ -1,5 +1,5 @@
-
-const API_URL = 'http://192.168.0.185:8000'; 
+//colocar seu ip
+const API_URL = 'http://ip:8000'; 
 
 export default {
   // --- INICIALIZAÇÃO ---
