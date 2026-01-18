@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import RelatoCaso
+from core.models import RelatoCaso
 
 class RelatoCasoSerializer(serializers.ModelSerializer):
     class Meta:

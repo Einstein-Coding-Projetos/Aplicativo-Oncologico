@@ -20,7 +20,7 @@ export const dadosPsicologos = [
     nome: 'Dra. Patrícia Lima',
     especialidade: 'Terapia Cognitivo-Comportamental',
     descricao: 'Auxílio no controle de ansiedade e depressão pós-diagnóstico.',
-    dias: ['Sexta-feira'],
+    dias: ['Sexta'],
     horarios: ['13:00', '14:00', '15:00']
   },
   {
@@ -36,7 +36,7 @@ export const dadosPsicologos = [
     nome: 'Dra. Sofia Mendes',
     especialidade: 'Psicologia Infantil',
     descricao: 'Atendimento lúdico para crianças em tratamento oncológico.',
-    dias: ['Quinta-feira'],
+    dias: ['Quinta'],
     horarios: ['14:00', '15:30', '16:45']
   }
 ];

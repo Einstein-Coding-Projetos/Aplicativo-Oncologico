@@ -20,7 +20,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from .views import agendar
+from .views import agendar, concluir_consulta
 
 
 urlpatterns = [
@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/accounts/', include('accounts.urls')),
     path("api/", include("core.urls")),
     path('agendar', agendar, name='agendar'),
+    path('concluir/<int:id_consulta>', concluir_consulta, name='concluir')
 ]
 
 

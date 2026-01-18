@@ -1,8 +1,8 @@
 import random
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import RelatoCaso
-from .serializers import RelatoCasoSerializer
+from core.models import RelatoCaso
+from core.serializers import RelatoCasoSerializer
 
 @api_view(["GET"])
 def relato_aleatorio(request):

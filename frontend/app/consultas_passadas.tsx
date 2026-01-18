@@ -1,16 +1,25 @@
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import { StyleSheet, Text, View, Pressable, useCallback } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import api from '@/lib/api';
+import {"AgendamentoScreen()"} from "@/app/(tabs)/agendamento"
+
+const API_URL = 'http://192.168.0.185:8000'; 
+
 
 export default function ConsultasPassadas() {
+
   const colorScheme = useColorScheme();
   const router = useRouter();
+ 
+
+  
 
   return (
     <View style={[styles.container, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
       <Text style={[styles.title, { color: Colors[colorScheme ?? 'light'].text }]}>Consultas Passadas</Text>
-      <Text style={[styles.subtitle, { color: Colors[colorScheme ?? 'light'].text }]}>Aqui aparecerão suas consultas anteriores.</Text>
+      <Text style={[styles.subtitle, { color: Colors[colorScheme ?? 'light'].text }]}></Text>
       <Pressable style={[styles.button, { backgroundColor: Colors[colorScheme ?? 'light'].tint, marginTop: 20 }]} onPress={() => router.back()}>
         <Text style={styles.buttonText}>Voltar</Text>
       </Pressable>
