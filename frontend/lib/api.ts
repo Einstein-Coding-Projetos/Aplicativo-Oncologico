@@ -7,7 +7,6 @@ export default {
     return; // Não precisa criar tabela, o PostgreSQL já tem ela.
   },
 
-  // --- BUSCAR LISTA ---
   async fetchAppointments() {
     try {
       const response = await fetch(`${API_URL}/agendar`);
@@ -87,6 +86,34 @@ export default {
     } catch (error) {
       console.error("Erro ao concluir:", error);
       return [];
+
+      
+    }
+  },
+
+  async fetchConcluidas() {
+    try {
+      const response = await fetch(`${API_URL}/concluidas`);
+      
+      if (!response.ok) {
+        throw new Error(`Erro ao buscar: ${response.status}`);
+      }
+      
+      const data = await response.json();
+
+      // Mapeia o JSON que vem do Python para o App
+      return data.map((item: any) => ({
+        id: item.id.toString(),
+        profissional: item.profissional,
+        date: item.date, // O Python já manda como string (YYYY-MM-DD)
+        horario: item.horario,
+        status: item.status
+      }));
+
+    } catch (error) {
+      console.error("Erro no fetchConcluidas:", error);
+      return [];
     }
   },
 };
+
