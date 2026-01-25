@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import relato_aleatorio
+from .views import relato_do_dia
 
 urlpatterns = [
-    path("relato-aleatorio/", relato_aleatorio),
+    path("relato-do-dia/", relato_do_dia),
 ]
