@@ -1,7 +1,12 @@
 import random
 from datetime import date
 from django.http import JsonResponse
-from .models import RelatoCaso
+from django.views.decorators.csrf import csrf_exempt
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from .models import RelatoCaso, Appointment
+from .serializers import RelatoCasoSerializer, AppointmentSerializer
 
 def relato_do_dia(request):
     hoje = date.today()
@@ -44,3 +49,34 @@ def relato_do_dia(request):
         "texto": relato.texto,
         "data": str(hoje),
     })
+
+def relato_aleatorio(request):
+    relatos = RelatoCaso.objects.filter(ativo=True)
+    if not relatos.exists():
+        return JsonResponse({'mensagem': 'Nenhum relato disponível'}, status=404)
+    relato = random.choice(list(relatos))
+    return JsonResponse({
+        'id': relato.id,
+        'titulo': relato.titulo,
+        'subtitulo': relato.subtitulo,
+        'texto': relato.texto,
+    })
+
+class AppointmentViewSet(viewsets.ModelViewSet):
+    queryset = Appointment.objects.all().order_by('-date')
+    serializer_class = AppointmentSerializer
+    
+    @action(detail=False, methods=['get'])
+    def pending(self, request):
+        """Get all pending appointments (not completed)"""
+        appointments = Appointment.objects.exclude(status=Appointment.STATUS_COMPLETED).order_by('date')
+        serializer = self.get_serializer(appointments, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def mark_completed(self, request, pk=None):
+        """Mark an appointment as completed"""
+        appointment = self.get_object()
+        appointment.mark_completed()
+        serializer = self.get_serializer(appointment)
+        return Response(serializer.data)

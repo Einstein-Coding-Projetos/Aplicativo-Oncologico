@@ -6,11 +6,10 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
 
 interface Appointment {
-  id: string;
+  id: number;
   title: string;
   date: string;
-  horario: string;
-  status: string;
+  status: 'agendado' | 'concluído' | 'pendente';
 }
 
 export default function AgendamentoScreen() {
@@ -25,16 +24,14 @@ export default function AgendamentoScreen() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
  
   // Função para adicionar uma consulta
-  const addAppointment = async (profissional: string, date: Date, horario: string, ) => {
+  const addAppointment = async (title: string, date: string) => {
     try {
       // create on backend
-      const created = await api.createAppointment({ profissional, date, horario});
+      const created = await api.createAppointment({ title, date });
       // update local list
       setAppointments((prev) => [created, ...prev]);
     } catch (err) {
       console.error(err);
-      // fallback: optimistic local add
-      setAppointments((prev) => [{ id: Date.now().toString(), profissional, horario, date }, ...prev]);
     }
   };
 
@@ -91,7 +88,7 @@ export default function AgendamentoScreen() {
             style={[styles.completeButton, { backgroundColor: Colors[colorScheme ?? 'light'].tint, marginTop: 10 }]}
             onPress={async () => {
               try {
-                await api.completeAppointment(Number(item.id));
+                await api.completeAppointment(item.id);
                 // refresh lists
                 await load();
               } catch (e) {
@@ -139,7 +136,7 @@ export default function AgendamentoScreen() {
           {process.env.NODE_ENV === 'development' && (
             <Pressable
               style={[styles.button, { backgroundColor: '#999', marginTop: 20 }]}
-              onPress={() => addAppointment('Dr.Consulta teste', new Date(Date.now() + 24 * 3600 * 1000).toISOString(), '09:00')}
+              onPress={() => addAppointment('Consulta teste', new Date(Date.now() + 24 * 3600 * 1000).toISOString())}
             >
               <Text style={styles.buttonText}>Adicionar exemplo</Text>
             </Pressable>
@@ -155,7 +152,7 @@ export default function AgendamentoScreen() {
           <FlatList
             data={sortedAppointments}
             renderItem={renderAppointment}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => String(item.id)}
             style={styles.appointmentList}
             scrollEnabled={true}
           />

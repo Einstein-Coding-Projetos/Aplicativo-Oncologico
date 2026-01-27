@@ -1,55 +1,68 @@
+// Configuration
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api';
+
 type Appointment = {
-  id: string;
-  title?: string;
-  profissional?: string;
+  id: number;
+  title: string;
   date: string;
-  horario: string;
-  status?: string;
+  status: 'agendado' | 'concluído' | 'pendente';
 };
 
 type NewAppointment = {
-  profissional: string;
-  date: string | Date;
-  horario: string;
+  title: string;
+  date: string;
 };
 
-// Simple in-memory store that survives module lifetime
-const store: Appointment[] = [
-  // seed example
-  {
-    id: '1',
-    title: 'Consulta com Dra. Silva',
-    profissional: 'Dra. Silva',
-    date: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-    horario: '10:00',
-    status: 'agendado',
-  },
-];
+async function request(endpoint: string, options: RequestInit = {}) {
+  const url = `${API_BASE_URL}${endpoint}`;
+  const response = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+    ...options,
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  return response.json();
+}
 
 export default {
   async fetchAppointments(): Promise<Appointment[]> {
-    // TODO: replace with real network call to backend when available
-    return Promise.resolve([...store]);
+    try {
+      const data = await request('/appointments/pending/');
+      return data;
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      throw error;
+    }
   },
 
   async createAppointment(payload: NewAppointment): Promise<Appointment> {
-    const a: Appointment = {
-      id: Date.now().toString(),
-      title: `Consulta com ${payload.profissional}`,
-      profissional: payload.profissional,
-      date: typeof payload.date === 'string' ? payload.date : payload.date.toISOString(),
-      horario: payload.horario,
-      status: 'agendado',
-    };
-    store.unshift(a);
-    return Promise.resolve(a);
+    try {
+      const data = await request('/appointments/', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      return data;
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+      throw error;
+    }
   },
 
   async completeAppointment(id: number | string): Promise<boolean> {
-    const sid = String(id);
-    const idx = store.findIndex((s) => s.id === sid);
-    if (idx === -1) return Promise.reject(new Error('Appointment not found'));
-    store[idx].status = 'concluido';
-    return Promise.resolve(true);
+    try {
+      await request(`/appointments/${id}/mark_completed/`, {
+        method: 'POST',
+      });
+      return true;
+    } catch (error) {
+      console.error('Error completing appointment:', error);
+      throw error;
+    }
   },
 };
