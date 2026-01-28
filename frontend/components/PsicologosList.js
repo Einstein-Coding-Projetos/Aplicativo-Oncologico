@@ -18,6 +18,7 @@ const PsicologosList = () => {
   const [dataAberto, setdataAberto] = useState(null);
   // Estado auxiliar para guardar as datas calculadas de cada psicólogo
   const [datasCalculadas, setDatasCalculadas] = useState([]); 
+  const [horariosAgendados, setHorariosAgendados]= useState([])
 
   // Mapeamento de String para Index do JavaScript (0 = Domingo, 1 = Segunda...)
   const mapaDiasSemana = {
@@ -114,22 +115,52 @@ const PsicologosList = () => {
     return marcados;
   };
 
-  const abrirCard = (item) => {
+  const abrirCard = async (item) => {
     if (item.id === idAberto) {
       setIdAberto(null); //se o card já está aberto, ele fecha
       setDatasCalculadas([]); // Limpa
-    } else {
-      // se não esta aberto, vai abrir
+      setHorariosAgendados([]);
+    } else { 
+      // se não esta aberto, vai abrir     
+      setHorariosAgendados([]);
+      setdataAberto(null); // Fecha o dia selecionado ao trocar de médico
+      setIdAberto(item.id); //defini que esse card está aberto agora
+
       const datasReais = calcularDatasFuturas(item.dias); //define os dias transformados em números 
       setDatasCalculadas(datasReais); //armazena essas datas
-      setIdAberto(item.id); //defini que esse card está aberto agora
-      setdataAberto(null); // se selecionar um dia de um psicológo, não aparece esse mesmo dia como selecionado em outro psicólogo
+
+      //colocar seu ip
+      try {
+        const nomeSeguro = encodeURIComponent(item.nome);
+        const resposta = await fetch(`http://ip:8000/horarios-ocupados/${nomeSeguro}`);
+        
+        if (resposta.ok) {
+            const dadosBrutos = await resposta.json();
+            console.log("--------------------------------");
+console.log("Médico pesquisado:", item.nome);
+console.log("O que o banco encontrou:", dadosBrutos);
+console.log("--------------------------------");
+            
+            // --- A MÁGICA ACONTECE AQUI ---
+            // Vamos criar uma nova lista limpa, garantindo que o horário tenha só 5 letras (00:00)
+            const dadosLimpos = dadosBrutos.map(item => ({
+                date: item.date,                 // Mantém a data
+                horario: item.horario.substring(0, 5) // Corta "14:00:00" para "14:00"
+            }));
+
+            console.log("Horários ocupados (Limpos):", dadosLimpos); // Para você conferir no terminal
+            setHorariosAgendados(dadosLimpos); 
+        }
+      } catch (error) {
+        console.error("Erro ao buscar horários ocupados:", error);
+      }
     }
   };
 
   const renderItem = ({ item }) => {
     const estaAberto = item.id === idAberto; //define que o estaAberto ocorrerá quando o card estiver aberto
 // quando apertar no nome irá para a função abrirCard
+
     return ( 
       <View style={styles.container}>
         <TouchableOpacity 
@@ -178,19 +209,40 @@ const PsicologosList = () => {
               <View style={{ marginTop: 20 }}>
                 <Text style={styles.subtitle}>Horários para {dataAberto.split('-').reverse().join('/')}:</Text> 
                 <View style={styles.horariosContainer}>
-                  {item.horarios.map((horario, hIndex) => ( 
-                    <TouchableOpacity 
-                      style={styles.btnHorario} 
-                      key={hIndex} 
-                      onPress={() => {
-                         Alert.alert("Confirmar", `Agendar dia ${dataAberto} às ${horario}?`, [
-                           {text: "Cancelar"},
-                           {text: "Sim", onPress: () => confirmarAgendamento(dataAberto, horario, item)}
-                         ]);
-                      }}>
-                      <Text style={styles.textoHorario}>{horario}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  
+                  {item.horarios.map((horario, hIndex) => {
+                    // Verifica se o horário está na lista de ocupados
+                    const estaOcupado = horariosAgendados.some(agendamento => 
+                        agendamento.date === dataAberto && agendamento.horario === horario
+                    );
+
+                    return ( 
+                        <TouchableOpacity 
+                            style={[
+                                styles.btnHorario,
+                                // Se estiver ocupado, pinta de cinza
+                                estaOcupado && { backgroundColor: '#e0e0e0', borderColor: '#ccc' }
+                            ]} 
+                            key={hIndex} 
+                            disabled={estaOcupado} // Bloqueia o clique
+                            onPress={() => {
+                                Alert.alert("Confirmar", `Agendar dia ${dataAberto} às ${horario}?`, [
+                                    {text: "Cancelar"},
+                                    {text: "Sim", onPress: () => confirmarAgendamento(dataAberto, horario, item)}
+                                ]);
+                            }}
+                        >
+                            <Text style={[
+                                styles.textoHorario,
+                                // Se estiver ocupado, texto cinza
+                                estaOcupado && { color: '#999' }
+                            ]}>
+                                {estaOcupado ? "Ocupado" : horario}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                  })}
+
                 </View>
               </View>
             )}
@@ -199,8 +251,8 @@ const PsicologosList = () => {
       </View>
     );
   };
-
-  return (
+ 
+return (
     <View style={styles.mainContainer}>
       <FlatList 
         data={dadosPsicologos} 

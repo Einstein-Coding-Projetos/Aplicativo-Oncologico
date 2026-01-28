@@ -115,5 +115,27 @@ export default {
       return [];
     }
   },
+  async fetchHorariosOcupados(nomeProfissional: string) {
+    try {
+      const nomeSeguro=encodeURIComponent(nomeProfissional);
+      const response = await fetch(`${API_URL}/horariosOcupados/${nomeSeguro}`);
+      
+      if (!response.ok) {
+        throw new Error(`Erro ao buscar: ${response.status}`);
+      }
+      
+      const data = await response.json();
+
+      // Mapeia o JSON que vem do Python para o App
+      return data.map((item: any) => ({
+        date: item.date, // O Python já manda como string (YYYY-MM-DD)
+        horario: item.horario,
+        status: item.status
+      }));
+
+    } catch (error) {
+      console.error("Erro no fetchAppointments:", error);
+      return [];
+    }}
 };
 
