@@ -1,68 +1,141 @@
-// Configuration
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api';
-
-type Appointment = {
-  id: number;
-  title: string;
-  date: string;
-  status: 'agendado' | 'concluído' | 'pendente';
-};
-
-type NewAppointment = {
-  title: string;
-  date: string;
-};
-
-async function request(endpoint: string, options: RequestInit = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
-  const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    ...options,
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
-}
+//colocar seu ip
+const API_URL = 'http://ip:8000'; 
 
 export default {
-  async fetchAppointments(): Promise<Appointment[]> {
+  // --- INICIALIZAÇÃO ---
+  async init() {
+    return; // Não precisa criar tabela, o PostgreSQL já tem ela.
+  },
+
+  async fetchAppointments() {
     try {
-      const data = await request('/appointments/pending/');
-      return data;
+      const response = await fetch(`${API_URL}/agendar`);
+      
+      if (!response.ok) {
+        throw new Error(`Erro ao buscar: ${response.status}`);
+      }
+      
+      const data = await response.json();
+
+      // Mapeia o JSON que vem do Python para o App
+      return data.map((item: any) => ({
+        id: item.id.toString(),
+        profissional: item.profissional,
+        date: item.date, // O Python já manda como string (YYYY-MM-DD)
+        horario: item.horario,
+        status: item.status
+      }));
+
     } catch (error) {
-      console.error('Error fetching appointments:', error);
+      console.error("Erro no fetchAppointments:", error);
+      return [];
+    }
+  },
+
+  async createAppointment(payload: { profissional: string, date: string | Date, horario: string }) {
+    // Garante que a data seja YYYY-MM-DD para o banco aceitar
+    let dateString = '';
+    if (typeof payload.date === 'string') {
+        dateString = payload.date.substring(0, 10); // Pega só os 10 primeiros caracteres para garantir "YYYY-MM-DD"
+    } else {
+        const ano = payload.date.getFullYear();
+        const mes = String(payload.date.getMonth() + 1).padStart(2, '0'); //string: nome do mês; pegar o número do mês + 1, pois janeiro é zero; o padStart garante que o mês seja escrito com dois dígitos 
+        const dia = String(payload.date.getDate()).padStart(2, '0');
+        dateString = `${ano}-${mes}-${dia}`;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/agendar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // Enviamos com os nomes que o Python espera ler
+          psicologo: payload.profissional, 
+          dia: dateString,
+          horario: payload.horario
+        }),
+      });
+
+      if (!response.ok) {
+         const erro = await response.text();
+         throw new Error(`Erro do Python: ${erro}`);
+      }
+
+      // Se deu certo, retornamos o objeto para a tela atualizar
+      return {
+        id: Date.now().toString(), // ID provisório pra tela não piscar
+        profissional: payload.profissional,
+        date: payload.date, // Mantém o formato original pra tela
+        horario: payload.horario,
+        status: 'agendado',
+      };
+
+    } catch (error) {
+      console.error("Erro ao criar:", error);
       throw error;
     }
   },
 
-  async createAppointment(payload: NewAppointment): Promise<Appointment> {
+  async completeAppointment(id: number | string) {
     try {
-      const data = await request('/appointments/', {
-        method: 'POST',
-        body: JSON.stringify(payload),
+      // Chama a nova rota que criamos
+      const response = await fetch(`${API_URL}/concluir/${id}`, {
+        method: 'POST', // Usando POST para evitar problemas de configuração de PUT
       });
-      return data;
+      return response.ok;
     } catch (error) {
-      console.error('Error creating appointment:', error);
-      throw error;
+      console.error("Erro ao concluir:", error);
+      return [];
+
+      
     }
   },
 
-  async completeAppointment(id: number | string): Promise<boolean> {
+  async fetchConcluidas() {
     try {
-      await request(`/appointments/${id}/mark_completed/`, {
-        method: 'POST',
-      });
-      return true;
+      const response = await fetch(`${API_URL}/concluidas`);
+      
+      if (!response.ok) {
+        throw new Error(`Erro ao buscar: ${response.status}`);
+      }
+      
+      const data = await response.json();
+
+      // Mapeia o JSON que vem do Python para o App
+      return data.map((item: any) => ({
+        id: item.id.toString(),
+        profissional: item.profissional,
+        date: item.date, // O Python já manda como string (YYYY-MM-DD)
+        horario: item.horario,
+        status: item.status
+      }));
+
     } catch (error) {
-      console.error('Error completing appointment:', error);
-      throw error;
+      console.error("Erro no fetchConcluidas:", error);
+      return [];
     }
   },
+  async fetchHorariosOcupados(nomeProfissional: string) {
+    try {
+      const nomeSeguro=encodeURIComponent(nomeProfissional);
+      const response = await fetch(`${API_URL}/horariosOcupados/${nomeSeguro}`);
+      
+      if (!response.ok) {
+        throw new Error(`Erro ao buscar: ${response.status}`);
+      }
+      
+      const data = await response.json();
+
+      // Mapeia o JSON que vem do Python para o App
+      return data.map((item: any) => ({
+        date: item.date, // O Python já manda como string (YYYY-MM-DD)
+        horario: item.horario,
+        status: item.status
+      }));
+
+    } catch (error) {
+      console.error("Erro no fetchAppointments:", error);
+      return [];
+    }}
 };
+
