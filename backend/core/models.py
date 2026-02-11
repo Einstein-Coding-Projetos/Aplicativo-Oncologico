@@ -34,68 +34,45 @@ class Appointment(models.Model):
 
 
 class UserProfile(models.Model):
-    USER_TYPE_CHOICES = (
-        ('patient', 'Paciente'),
-        ('psychologist', 'Psicólogo'),
-    )
+	USER_TYPE_CHOICES = (
+		('patient', 'Paciente'),
+		('psychologist', 'Psicólogo'),
+	)
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='patient')
-    bio = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+	user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+	user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='patient')
+	bio = models.TextField(blank=True, null=True)
+	
+	# Tratamento oncológico
+	treatment_start_date = models.DateField(null=True, blank=True, help_text="Data de início do tratamento")
+	treatment_duration_days = models.IntegerField(null=True, blank=True, help_text="Duração total do tratamento em dias")
+	
+	created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"{self.user.username} - {self.user_type}"
+	def __str__(self):
+		return f"{self.user.username} - {self.user_type}"
 
+	@property
+	def current_day(self) -> int:
+		"""Retorna o dia atual do tratamento (começando em 1)"""
+		if not self.treatment_start_date:
+			return 0
+		days_elapsed = (timezone.now().date() - self.treatment_start_date).days
+		return max(1, min(days_elapsed + 1, self.treatment_duration_days or 0))
 
-    titulo = models.CharField(max_length=200)
-    subtitulo = models.CharField(max_length=300, blank=True)
-    texto = models.TextField()
+	@property
+	def treatment_progress_percent(self) -> float:
+		"""Retorna o percentual de progresso do tratamento (0-100)"""
+		if not self.treatment_duration_days or self.treatment_duration_days == 0:
+			return 0
+		return (self.current_day / self.treatment_duration_days) * 100
 
-    ativo = models.BooleanField(default=True)
-    exibido_em = models.DateField(null=True, blank=True)
-
-    criado_em = models.DateTimeField(auto_now_add=True)
-
-
-class RelatoCaso(models.Model):
-    titulo = models.CharField(max_length=255)
-    subtitulo = models.CharField(max_length=255, blank=True, null=True)
-    conteudo = models.TextField()
-    criado_em = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.titulo
-    
-
-
-from django.db import models
-from django.contrib.auth.models import User
-
-# Create your models here.
-
-class UserProfile(models.Model):
-    USER_TYPE_CHOICES = (
-        ('patient', 'Paciente'),
-        ('psychologist', 'Psicólogo'),
-    )
-
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='patient')
-    bio = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.user.username} - {self.user_type}"
 
 class RelatoCaso(models.Model):
-    titulo = models.CharField(max_length=200)
-    texto = models.TextField()
+	titulo = models.CharField(max_length=255)
+	subtitulo = models.CharField(max_length=255, blank=True, null=True)
+	conteudo = models.TextField()
+	criado_em = models.DateTimeField(auto_now_add=True)
 
-    ativo = models.BooleanField(default=True)
-    ja_exibido = models.BooleanField(default=False)
-
-    criado_em = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.titulo
+	def __str__(self):
+		return self.titulo

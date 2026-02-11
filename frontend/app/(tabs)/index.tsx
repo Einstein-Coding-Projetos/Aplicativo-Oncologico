@@ -1,12 +1,60 @@
 import { Image, StyleSheet, Platform, TouchableOpacity, ScrollView, View, Text } from 'react-native';
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { HelloWave } from '../../components/hello-wave';
+import ParallaxScrollView from '../../components/parallax-scroll-view';
+import { ThemedText } from '../../components/themed-text';
+import { ThemedView } from '../../components/themed-view';
+import TreatmentProgress from '../../components/TreatmentProgress';
+import TreatmentProgressBar from '../../components/TreatmentProgressBar';
+import StreakCounter from '../../components/StreakCounter';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { useEffect, useState, useCallback } from 'react';
+import api from '../../lib/api';
+import { endpoints } from '../../constants/api';
 
 export default function HomeScreen() {
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [activityToday, setActivityToday] = useState(false);
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      const response = await fetch(endpoints.userProfile);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Profile data:', data);
+        setUserProfile(data.profile || data);
+        setActivityToday(data.profile?.today_activity_completed ?? false);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar perfil:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  // Recarrega quando a tela ganha foco
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
+    }, [fetchProfile])
+  );
+
+  const handleToggleActivity = async () => {
+    try {
+      // Aqui você pode chamar uma API para registrar a atividade
+      setActivityToday(!activityToday);
+      // Depois recarrega o perfil para atualizar o streak
+      await fetchProfile();
+    } catch (error) {
+      console.error('Erro ao registrar atividade:', error);
+    }
+  };
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#C7D2FE', dark: '#1e1b4b' }}
@@ -21,12 +69,35 @@ export default function HomeScreen() {
         <HelloWave />
       </ThemedView>
 
+      {/* Barra de progresso do tratamento - NO TOPO */}
+      {!loading && userProfile && (
+        <TreatmentProgressBar
+          currentValue={userProfile.current_day ?? 0}
+          maxValue={userProfile.treatment_duration_days ?? 1}
+        />
+      )}
+
+      {/* Streak Counter - LOGO ABAIXO */}
+      {!loading && userProfile && (
+        <StreakCounter streakDays={userProfile.activity_streak ?? 0} />
+      )}  
+
       <ThemedView style={styles.stepContainer}>
         <ThemedText type="subtitle">Seu companheiro diário</ThemedText>
         <ThemedText>
           O Gradatim está aqui para apoiar sua jornada oncológica com ferramentas para seu bem-estar.
         </ThemedText>
       </ThemedView>
+
+      {/* Componente de Progressão de Tratamento */}
+      {!loading && userProfile && (
+        <TreatmentProgress
+          currentDay={userProfile.current_day}
+          totalDays={userProfile.treatment_duration_days}
+          treatmentStartDate={userProfile.treatment_start_date}
+          progressPercent={userProfile.treatment_progress_percent}
+        />
+      )}
 
       <View style={styles.actionsContainer}>
         <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(tabs)/diario')}>

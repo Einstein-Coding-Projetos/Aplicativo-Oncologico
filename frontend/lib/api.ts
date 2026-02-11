@@ -136,6 +136,23 @@ export default {
     } catch (error) {
       console.error("Erro no fetchAppointments:", error);
       return [];
-    }}
+    }
+  },
+
+  async fetchUserProfile() {
+    try {
+      const response = await fetch(`${API_URL}/api/user-profile/me/`);
+      
+      if (!response.ok) {
+        throw new Error(`Erro ao buscar perfil: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Erro ao buscar perfil:", error);
+      return null;
+    }
+  }
 };
 

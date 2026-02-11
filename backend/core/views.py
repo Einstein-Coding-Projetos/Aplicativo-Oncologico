@@ -5,8 +5,9 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import RelatoCaso, Appointment
-from .serializers import RelatoCasoSerializer, AppointmentSerializer
+from rest_framework.permissions import IsAuthenticated
+from .models import RelatoCaso, Appointment, UserProfile
+from .serializers import RelatoCasoSerializer, AppointmentSerializer, UserProfileSerializer
 
 def relato_do_dia(request):
     hoje = date.today()
@@ -79,4 +80,21 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         appointment = self.get_object()
         appointment.mark_completed()
         serializer = self.get_serializer(appointment)
+        return Response(serializer.data)
+
+class UserProfileViewSet(viewsets.ModelViewSet):
+    queryset = UserProfile.objects.all()
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+    
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        """Get the current authenticated user's profile"""
+        try:
+            profile = UserProfile.objects.get(user=request.user)
+        except UserProfile.DoesNotExist:
+            # Create profile if it doesn't exist
+            profile = UserProfile.objects.create(user=request.user)
+        
+        serializer = self.get_serializer(profile)
         return Response(serializer.data)

@@ -2,13 +2,13 @@ import { StyleSheet, Text, View, Pressable, FlatList, ActivityIndicator } from '
 
 import { useRouter } from 'expo-router';
 
-import { Colors } from '@/constants/theme';
+import { Colors } from '../constants/theme';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useColorScheme } from '../hooks/use-color-scheme';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 
-import api from '@/lib/api';
+import api from '../lib/api';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
