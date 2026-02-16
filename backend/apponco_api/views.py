@@ -148,3 +148,18 @@ def horarios_ocupados(request, nome_profissional):
             return JsonResponse({'erro': str(e)}, status=500)
             
     return JsonResponse([], safe=False)
+
+@csrf_exempt
+def limpar_historico(request):
+    if request.method == 'DELETE':
+        try:
+            with connection.cursor() as cursor:
+                # O PULO DO GATO: Deleta TUDO que já foi concluído
+                # Os agendamentos futuros ('agendado') continuam lá seguros.
+                cursor.execute("DELETE FROM alunos WHERE status = 'concluido'")
+                
+            return JsonResponse({'mensagem': 'Histórico limpo com sucesso!'})
+        except Exception as e:
+            return JsonResponse({'erro': str(e)}, status=500)
+            
+    return JsonResponse({'erro': 'Método inválido'}, status=405)

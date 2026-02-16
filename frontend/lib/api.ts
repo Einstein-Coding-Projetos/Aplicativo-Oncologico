@@ -1,5 +1,5 @@
 //colocar seu ip
-const API_URL = 'http://ip:8000'; 
+const API_URL = 'http://192.168.0.185:8000'; 
 
 export default {
   // --- INICIALIZAÇÃO ---
@@ -152,6 +152,19 @@ export default {
     } catch (error) {
       console.error("Erro ao buscar perfil:", error);
       return null;
+    }
+  },
+
+  // --- LIMPAR TODO O HISTÓRICO ---
+  async deleteAllHistory() {
+    try {
+      const response = await fetch(`${API_URL}/limpar-historico/`, {
+        method: 'DELETE',
+      });
+      return response.ok;
+    } catch (error) {
+      console.error("Erro ao limpar histórico:", error);
+      return false;
     }
   }
 };

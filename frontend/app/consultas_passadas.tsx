@@ -1,14 +1,14 @@
-import { StyleSheet, Text, View, Pressable, FlatList, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Pressable, FlatList, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 
 import { useRouter } from 'expo-router';
 
-import { Colors } from '../constants/theme';
+import { Colors } from '@/constants/theme';
 
-import { useColorScheme } from '../hooks/use-color-scheme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 
-import api from '../lib/api';
+import api from '@/lib/api';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -73,7 +73,9 @@ export default function ConsultasPassadas() {
             const [ano, mes, dia] = partes;
             dataFormatada = `${dia}/${mes}/${ano}`;
         }
-    }
+    };
+
+  
 
   return (
     <View style={[styles.container, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
@@ -105,13 +107,43 @@ export default function ConsultasPassadas() {
   );
   
 }
+
+  const confirmarLimpezaGeral = async () => {
+    Alert.alert(
+      "Atenção",
+      "Deseja limpar todas as consultas passadas? Essa ação não pode ser desfeita.",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
+        {
+          text: "Sim, Limpar Tudo",
+          style: "destructive",
+          onPress: async () => {
+            const sucesso = await api.deleteAllHistory();
+            if (sucesso) {
+              setConsultas([]);
+              Alert.alert("Sucesso", "Histórico apagado!");
+            } else {
+              Alert.alert("Erro", "Não foi possível limpar o histórico.");
+            }
+          }
+        }
+      ]
+    );
+  };
+
 return (
      <SafeAreaView style={[styles.container, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
     <>
     
       <Pressable style={[styles.button, { backgroundColor: Colors[colorScheme ?? 'light'].tint, marginTop: 20 }]} onPress={() => router.back()}>
               <Text style={styles.buttonText}>Voltar</Text>
+
+
             </Pressable>
+            
 
               <Text style={[styles.title, { color: Colors[colorScheme ?? 'light'].text }]}>
     
@@ -124,7 +156,6 @@ return (
             
              
               <FlatList
-    
                 data={Consultas}
     
                 renderItem={renderItem}
@@ -137,7 +168,10 @@ return (
     
               />
 
-    
+    <TouchableOpacity  style={styles.btnLimparTudo}   onPress={confirmarLimpezaGeral}>
+
+          <Text style={styles.textoLimpar}>Limpar Histórico</Text>
+        </TouchableOpacity>
     
               <Pressable
     
@@ -170,6 +204,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+  },
+  btnLimparTudo: {
+    backgroundColor: '#FF3B30', // Vermelho alerta
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 12,
+    margin: 10,
+    borderRadius: 8,
+    gap: 8, // Espaço entre ícone e texto
+    elevation: 3, // Sombra no Android
+  },
+  textoLimpar: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   floatingButton: {
 

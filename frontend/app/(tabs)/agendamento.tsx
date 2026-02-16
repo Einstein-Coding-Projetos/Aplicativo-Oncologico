@@ -2,13 +2,13 @@ import { StyleSheet, Text, View, Pressable, FlatList } from 'react-native';
 
 import { useRouter } from 'expo-router';
 
-import { Colors } from '../../constants/theme';
+import { Colors } from '@/constants/theme';
 
-import { useColorScheme } from '../../hooks/use-color-scheme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
 
-import api from '../../lib/api';
+import api from '@/lib/api';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -304,21 +304,7 @@ setAppointments((prev) => [{
 
 
 
-          {process.env.NODE_ENV === 'development' && (
-
-            <Pressable
-
-              style={[styles.button, { backgroundColor: '#9980fcf1', marginTop: 20 }]}
-
-              onPress={() => addAppointment('Dr.Consulta teste', new Date(Date.now() + 24 * 3600 * 1000).toISOString(), '09:00')}
-
-            >
-
-              <Text style={styles.buttonText}>Consultas Agendadas</Text>
-
-            </Pressable>
-
-          )}
+          
 
         </>
 

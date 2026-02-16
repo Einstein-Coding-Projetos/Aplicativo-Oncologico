@@ -27,7 +27,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-dev-only-chang
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
 
-ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -108,9 +108,9 @@ else:
             "ENGINE": "django.db.backends.postgresql",
             "NAME": os.environ.get("POSTGRES_DB", "apponco_db"),
             "USER": os.environ.get("POSTGRES_USER", "apponco_user"),
-            "PASSWORD": os.environ.get("POSTGRES_PASSWORD", ""),
+            "PASSWORD": 'einsteincoding25',
             "HOST": os.environ.get("POSTGRES_HOST", "localhost"),
-            "PORT": os.environ.get("POSTGRES_PORT", "5432"),
+            "PORT": os.environ.get("POSTGRES_PORT", "5433"),
         }
     }
 

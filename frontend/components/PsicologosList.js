@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
 import { dadosPsicologos } from "../app/data/dadosPsicologos";
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 
@@ -70,7 +70,7 @@ const PsicologosList = () => {
 
     //colocar seu ip
     try {
-        const resposta = await fetch('http://ip:8000/agendar', {
+        const resposta = await fetch('http://192.168.0.185:8000/agendar', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ const PsicologosList = () => {
       //colocar seu ip
       try {
         const nomeSeguro = encodeURIComponent(item.nome);
-        const resposta = await fetch(`http://ip:8000/horarios-ocupados/${nomeSeguro}`);
+        const resposta = await fetch(`http://192.168.0.185:8000/horarios-ocupados/${nomeSeguro}`);
         
         if (resposta.ok) {
             const dadosBrutos = await resposta.json();
@@ -167,6 +167,10 @@ console.log("--------------------------------");
           style={styles.card}
           onPress={() => abrirCard(item)}
         >
+          <Image 
+      source={item.perfil} 
+      style={styles.avatar} 
+    />
           <Text style={styles.nome}>{item.nome}</Text> 
         </TouchableOpacity>
 
@@ -271,7 +275,15 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 16, color: "#5c6b73ff", textAlign: "center", marginBottom: 10, marginTop: 10 },
   horariosContainer: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10 },
   btnHorario: { backgroundColor: '#fff', paddingVertical: 12, paddingHorizontal: 20, borderRadius: 25, borderWidth: 1, borderColor: '#4395e2ff', marginBottom: 10 },
-  textoHorario: { color: '#4395e2ff', fontWeight: 'bold' }
+  textoHorario: { color: '#4395e2ff', fontWeight: 'bold' },
+  avatar: {
+    width: 60,        // Largura
+    height: 60,       // Altura
+    borderRadius: 30, // Metade da largura para ficar REDONDO
+    borderWidth: 2,   // (Opcional) Borda branca
+    borderColor: 'white',
+    backgroundColor: '#ccc' // Cor de fundo caso a imagem falhe
+  }
 });
 
 export default PsicologosList;
