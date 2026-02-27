@@ -20,7 +20,6 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from .views import agendar, concluir_consulta, horarios_ocupados, consultas_concluidas,limpar_historico
 
 
 urlpatterns = [
@@ -29,11 +28,7 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/accounts/', include('accounts.urls')),
     path("api/", include("core.urls")),
-    path('agendar', agendar, name='agendar'),
-    path('concluir/<int:id_consulta>', concluir_consulta, name='concluir'),
-    path ('concluidas', consultas_concluidas, name='concluidas'),
-    path('horarios-ocupados/<str:nome_profissional>', horarios_ocupados, name='horarios_ocupados'),
-    path('limpar-historico/', limpar_historico, name='limpar_historico'),]
+]
 
 
 

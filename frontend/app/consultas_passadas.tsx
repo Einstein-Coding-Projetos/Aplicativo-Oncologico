@@ -31,7 +31,7 @@ export default function ConsultasPassadas() {
 
   const handleNavigation = () => {
 
-    router.push("../screens/PsicologoScreen");
+    router.push("/psicologo");
 
   };
 

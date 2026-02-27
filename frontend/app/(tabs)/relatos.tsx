@@ -1,160 +1,116 @@
-import React, { useEffect, useState } from "react";
-import {
-  ScrollView,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  TouchableOpacity,
-  RefreshControl,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAppContext } from '../../context/AppContext';
+import api from '../../lib/api';
 
 type Relato = {
   id: number;
   titulo: string;
-  subtitulo: string;
-  texto: string;
-}; // define o formato do relato que vem da API
+  subtitulo?: string | null;
+  conteudo: string;
+  data?: string;
+};
+
+function getReadingTime(text: string): number {
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.ceil(words / 200));
+}
 
 export default function RelatosScreen() {
-  const [relato, setRelato] = useState<Relato | null>(null); // guarda o relato vindo da API
-  const [loading, setLoading] = useState(true); // controla se está carregando
-  const [erro, setErro] = useState<string | null>(null); // guarda uma mensagem de erro
-  const [refreshing, setRefreshing] = useState(false); // controla o estado do pull-to-refresh
+  const { dailyTaskCompleted } = useAppContext();
+  const [relato, setRelato] = useState<Relato | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    buscarRelato();
-  }, []); // busca relato quando a tela abre
-
-  const buscarRelato = async () => {
+  const loadRelato = useCallback(async () => {
     try {
-      setErro(null);  // função para buscar dados do backend
-
-      const response = await fetch(
-        "http://127.0.0.1:8000/api/relato-do-dia/"
-      ); // faz requisição HTTP para API Django
-
-      if (!response.ok) {
-        throw new Error("Erro ao buscar relato");
-      } // se não tiver resposta, lança erro
-
-      const data: Relato = await response.json(); // converte o JSON em objeto e garante que ele segue o tipo Relato
-
-      setRelato(data); // salva o relato no estado
-
-    } catch (e) {
-      console.log(e);
-      setErro("Não foi possível carregar o relato"); // lança eerro se não conseguir carregar o relato
+      setLoading(true);
+      setError(null);
+      const data = await api.fetchRelatoDoDia();
+      setRelato(data);
+    } catch (err: any) {
+      const message = err?.message ?? 'Falha ao carregar o relato do dia.';
+      if (message.toLowerCase().includes('nenhum relato')) {
+        setRelato(null);
+        setError(null);
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
-      setRefreshing(false); // para loading e refresh
-    } 
-  };
+    }
+  }, []);
 
-  // Estados: loading, erro e sem relato
+  useEffect(() => {
+    if (!dailyTaskCompleted) return;
+    loadRelato();
+  }, [dailyTaskCompleted, loadRelato]);
 
-  if (loading) {
+  if (!dailyTaskCompleted) {
     return (
-      <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
+      <SafeAreaView className="flex-1 bg-[#070F21] p-5">
+        <LinearGradient colors={['#1F3B8A', '#0EA5E9']} style={{ borderRadius: 10, padding: 18 }}>
+          <Text className="text-2xl font-black text-white">Relatos</Text>
+          <Text className="mt-1 text-sm text-blue-100">Conteudo educativo diario</Text>
+          <View className="mt-5 rounded-md border border-orange-200/50 bg-orange-500/20 p-6">
+            <Ionicons name="lock-closed" size={24} color="#FDBA74" />
+            <Text className="mt-3 text-base font-bold text-white">Conteudo bloqueado</Text>
+            <Text className="mt-2 text-sm leading-6 text-orange-100">
+              Complete seu check-in diario no botao flutuante para desbloquear o relato de hoje.
+            </Text>
+          </View>
+        </LinearGradient>
       </SafeAreaView>
     );
   }
-
-  if (erro) {
-    return (
-      <SafeAreaView style={styles.center}>
-        <Text>{erro}</Text>
-        <TouchableOpacity style={styles.botao} onPress={buscarRelato}>
-          <Text style={styles.botaoTexto}>Tentar novamente</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
-
-  if (!relato) {
-    return (
-      <SafeAreaView style={styles.center}>
-        <Text>Nenhum relato disponível</Text>
-      </SafeAreaView>
-    );
-  }
-
-  // Render principal
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              buscarRelato();
-            }}
-          />
-        }
-      >
-        <Text style={styles.titulo}>{relato.titulo}</Text>
+    <SafeAreaView className="flex-1 bg-[#070F21]">
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 140 }}>
+        <LinearGradient colors={['#1E3A8A', '#4F46E5', '#0EA5E9']} style={{ borderRadius: 10, padding: 16 }}>
+          <Text className="text-2xl font-black text-white">Relato do dia</Text>
+          <Text className="mt-1 text-sm text-blue-100">Leitura orientada para autocuidado e clareza emocional.</Text>
+        </LinearGradient>
 
-        {relato.subtitulo ? (
-          <Text style={styles.subtitulo}>{relato.subtitulo}</Text>
+        {loading ? (
+          <View className="mt-4 rounded-md border border-[#314466] bg-[#0E1A33] p-4">
+            <Text className="text-sm text-slate-200">Carregando relato...</Text>
+          </View>
         ) : null}
 
-        <Text style={styles.texto}>{relato.texto}</Text>
+        {!loading && error ? (
+          <View className="mt-4 rounded-md border border-red-300/40 bg-red-500/20 p-4">
+            <Text className="text-sm text-red-100">{error}</Text>
+            <Pressable className="mt-3 self-start rounded-md bg-red-500 px-4 py-2" onPress={loadRelato}>
+              <Text className="font-semibold text-white">Tentar novamente</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {!loading && !error && !relato ? (
+          <View className="mt-4 rounded-md border border-orange-300/40 bg-orange-500/20 p-4">
+            <Text className="text-sm text-orange-100">Nenhum relato disponível no momento.</Text>
+          </View>
+        ) : null}
+
+        {!loading && !error && relato ? (
+          <View className="mt-4 overflow-hidden rounded-md border border-[#314466] bg-[#0E1A33] p-4">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xs font-bold uppercase tracking-wide text-cyan-300">Destaque de hoje</Text>
+              <View className="rounded-md bg-orange-500/30 px-2 py-1">
+                <Text className="text-xs font-semibold text-orange-100">{getReadingTime(relato.conteudo)} min</Text>
+              </View>
+            </View>
+            <Text className="mt-2 text-xl font-black text-white">{relato.titulo}</Text>
+            {relato.subtitulo ? <Text className="mt-1 text-sm text-blue-200">{relato.subtitulo}</Text> : null}
+            <Text className="mt-3 text-sm leading-6 text-slate-200">{relato.conteudo}</Text>
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-// Estilos
-
-const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 40,
-  },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  titulo: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  subtitulo: {
-    fontSize: 16,
-    fontStyle: "italic",
-    color: "#666",
-    marginBottom: 16,
-  },
-  texto: {
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  botao: {
-    marginTop: 32,
-    backgroundColor: "#4F46E5",
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  botaoTexto: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-});

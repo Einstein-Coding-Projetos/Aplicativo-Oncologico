@@ -1,100 +1,120 @@
 import random
 from datetime import date
+
+from django.db.models.functions import Random
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import RelatoCaso, Appointment, UserProfile
-from .serializers import RelatoCasoSerializer, AppointmentSerializer, UserProfileSerializer
+from rest_framework.response import Response
+
+from .models import Appointment, RelatoCaso, UserProfile
+from .serializers import AppointmentSerializer, RelatoCasoSerializer, UserProfileSerializer
+
 
 def relato_do_dia(request):
     hoje = date.today()
+    total = RelatoCaso.objects.count()
 
-    # 1️⃣ Já existe relato escolhido hoje?
-    relato_hoje = RelatoCaso.objects.filter(
-        ativo=True,
-        exibido_em=hoje
-    ).first()
+    if total == 0:
+        return JsonResponse({"mensagem": "Nenhum relato disponível"}, status=404)
 
-    if relato_hoje:
-        return JsonResponse({
-            "id": relato_hoje.id,
-            "titulo": relato_hoje.titulo,
-            "subtitulo": relato_hoje.subtitulo,
-            "texto": relato_hoje.texto,
-            "data": str(hoje),
-        })
-
-    # 2️⃣ Se não, escolhe um novo
-    relatos_disponiveis = RelatoCaso.objects.filter(
-        ativo=True
-    )
-
-    if not relatos_disponiveis.exists():
-        return JsonResponse(
-            {"mensagem": "Nenhum relato disponível"},
-            status=404
-        )
-
-    relato = random.choice(list(relatos_disponiveis))
-
-    relato.exibido_em = hoje
-    relato.save()
+    # Seed with today's date so the same story is returned all day.
+    random.seed(hoje.toordinal())
+    idx = random.randrange(total)
+    relato = RelatoCaso.objects.all().order_by('id')[idx]
 
     return JsonResponse({
         "id": relato.id,
         "titulo": relato.titulo,
         "subtitulo": relato.subtitulo,
-        "texto": relato.texto,
+        "conteudo": relato.conteudo,
         "data": str(hoje),
     })
 
+
 def relato_aleatorio(request):
-    relatos = RelatoCaso.objects.filter(ativo=True)
-    if not relatos.exists():
+    relato = RelatoCaso.objects.order_by(Random()).first()
+    if not relato:
         return JsonResponse({'mensagem': 'Nenhum relato disponível'}, status=404)
-    relato = random.choice(list(relatos))
+
     return JsonResponse({
         'id': relato.id,
         'titulo': relato.titulo,
         'subtitulo': relato.subtitulo,
-        'texto': relato.texto,
+        'conteudo': relato.conteudo,
     })
 
+
 class AppointmentViewSet(viewsets.ModelViewSet):
-    queryset = Appointment.objects.all().order_by('-date')
     serializer_class = AppointmentSerializer
-    
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Appointment.objects.filter(user=self.request.user).order_by('-date')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
     @action(detail=False, methods=['get'])
     def pending(self, request):
-        """Get all pending appointments (not completed)"""
-        appointments = Appointment.objects.exclude(status=Appointment.STATUS_COMPLETED).order_by('date')
+        appointments = self.get_queryset().filter(
+            status__in=[Appointment.STATUS_SCHEDULED, Appointment.STATUS_PENDING]
+        ).order_by('date')
         serializer = self.get_serializer(appointments, many=True)
         return Response(serializer.data)
-    
+
+    @action(detail=False, methods=['get'])
+    def completed(self, request):
+        appointments = self.get_queryset().filter(status=Appointment.STATUS_COMPLETED).order_by('-date')
+        serializer = self.get_serializer(appointments, many=True)
+        return Response(serializer.data)
+
     @action(detail=True, methods=['post'])
     def mark_completed(self, request, pk=None):
-        """Mark an appointment as completed"""
         appointment = self.get_object()
         appointment.mark_completed()
         serializer = self.get_serializer(appointment)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'], url_path='occupied-slots')
+    def occupied_slots(self, request):
+        profissional = request.query_params.get('profissional', '').strip()
+        if not profissional:
+            return Response(
+                {'erro': 'O parâmetro "profissional" é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        occupied = Appointment.objects.filter(
+            profissional=profissional
+        ).filter(
+            status__in=[Appointment.STATUS_SCHEDULED, Appointment.STATUS_PENDING]
+        ).order_by('date', 'horario')
+        data = [{'date': str(a.date), 'horario': a.horario.strftime('%H:%M')} for a in occupied]
+        return Response(data)
+
+    @action(detail=False, methods=['delete'], url_path='clear-completed')
+    def clear_completed(self, request):
+        deleted_count, _ = Appointment.objects.filter(
+            user=request.user,
+            status=Appointment.STATUS_COMPLETED,
+        ).delete()
+        return Response({'deleted': deleted_count}, status=status.HTTP_200_OK)
+
+
 class UserProfileViewSet(viewsets.ModelViewSet):
-    queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated]
-    
+
+    def get_queryset(self):
+        return UserProfile.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
     @action(detail=False, methods=['get'])
     def me(self, request):
-        """Get the current authenticated user's profile"""
-        try:
-            profile = UserProfile.objects.get(user=request.user)
-        except UserProfile.DoesNotExist:
-            # Create profile if it doesn't exist
-            profile = UserProfile.objects.create(user=request.user)
-        
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
         serializer = self.get_serializer(profile)
         return Response(serializer.data)

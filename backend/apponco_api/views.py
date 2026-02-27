@@ -1,165 +1,107 @@
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.db import connection
-import json
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
 
-# @csrf_exempt é OBRIGATÓRIO aqui para o React Native conseguir acessar
-# sem precisar de um token de segurança complexo (usar só em desenvolvimento!)
-@csrf_exempt
+from core.models import Appointment
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def agendar(request):
     if request.method == 'GET':
-        try:
-            with connection.cursor() as cursor:
-                # Busca tudo da tabela alunos
-                cursor.execute("SELECT id, profissional, date, hora, status FROM alunos ORDER BY date ASC")
-                rows = cursor.fetchall()
-                
-                lista_consultas = []
-                for row in rows:
-                    lista_consultas.append({
-                        "id": row[0],
-                        "profissional": row[1],
-                        "date": str(row[2]), # Converte data para texto
-                        "horario": row[3],
-                        "status": row[4]
-                    })
-                
-            # Retorna a lista como JSON para o App
-            return JsonResponse(lista_consultas, safe=False)
-        except Exception as e:
-            return JsonResponse({'erro': str(e)}, status=500)
-    
-    if request.method == 'POST':
-        try:
-            # 1. Pega os dados que vieram do App
-            dados = json.loads(request.body)
-            print("PEDIDO RECEBIDO:", dados) # Vai aparecer no terminal do Python
+        consultas = Appointment.objects.filter(user=request.user).order_by('date')
+        lista = [
+            {
+                "id": a.id,
+                "profissional": a.profissional,
+                "date": str(a.date),
+                "horario": a.horario,
+                "status": a.status,
+            }
+            for a in consultas
+        ]
+        return Response(lista)
 
-            # 2. Prepara os dados
-            psicologo = dados.get('psicologo')
-            dia = dados.get('dia')
-            horario = dados.get('horario')
+    # POST
+    profissional = request.data.get('psicologo')
+    dia = request.data.get('dia')
+    horario = request.data.get('horario')
 
-            # 3. Executa o SQL direto no banco
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO alunos (profissional, date, hora, status) VALUES ( %s, %s, %s, %s)",
-                    [psicologo, dia, horario, 'agendado']
-                )
+    if not all([profissional, dia, horario]):
+        return Response(
+            {'erro': 'Os campos psicologo, dia e horario são obrigatórios.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-            return JsonResponse({'mensagem': 'Agendado com sucesso!'}, status=201)
+    appointment = Appointment.objects.create(
+        user=request.user,
+        profissional=profissional,
+        date=dia,
+        horario=horario,
+        status=Appointment.STATUS_SCHEDULED,
+    )
 
-        except Exception as e:
-            print("ERRO:", e)
-            return JsonResponse({'erro': str(e)}, status=500)
-
-    return JsonResponse({'erro': 'Método não permitido'}, status=405)
-
-@csrf_exempt
-def consultas_agendadas (request):
-    if request.method == 'GET':
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT id, profissional, date, hora, status FROM alunos WHERE status = 'agendado' ORDER BY date ASC")
-                rows = cursor.fetchall()
-                
-                lista_agendadas = []
-                for row in rows:
-                    lista_agendadas.append({
-                        "id": row[0],
-                        "profissional": row[1],
-                        "date": str(row[2]), 
-                        "horario": row[3],
-                        "status": row[4]
-                    })
-                
-            # Retorna a lista como JSON para o App
-            return JsonResponse(lista_agendadas, safe=False)
-        
-        except Exception as e:
-            return JsonResponse({'erro': str(e)}, status=500)
-        
-    return JsonResponse({'erro': 'Apenas GET permitido'}, status=405)
+    return Response(
+        {
+            "id": appointment.id,
+            "profissional": appointment.profissional,
+            "date": str(appointment.date),
+            "horario": appointment.horario,
+            "status": appointment.status,
+        },
+        status=status.HTTP_201_CREATED,
+    )
 
 
-@csrf_exempt
+@api_view(['PUT', 'POST'])
+@permission_classes([IsAuthenticated])
 def concluir_consulta(request, id_consulta):
-    if request.method == 'PUT' or request.method == 'POST':
-        try:
-            with connection.cursor() as cursor:
-                cursor.execute("UPDATE alunos SET status = 'concluido' WHERE id = %s", [id_consulta])
-            return JsonResponse({'status': 'Atualizado com sucesso'})
-        except Exception as e:
-            return JsonResponse({'erro': str(e)}, status=500)
-            
-    return JsonResponse({'erro': 'Método inválido'}, status=405)
+    appointment = get_object_or_404(Appointment, id=id_consulta, user=request.user)
+    appointment.mark_completed()
+    return Response({'status': 'Atualizado com sucesso'})
 
-# Coloque isso no final do arquivo views.py
 
-@csrf_exempt
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def consultas_concluidas(request):
-    if request.method == 'GET':
-        try:
-            with connection.cursor() as cursor:
-                # Busca apenas as concluídas, ordenando da mais recente para a mais antiga
-                cursor.execute("SELECT id, profissional, date, hora, status FROM alunos WHERE status = 'concluido' ORDER BY date DESC")
-                rows = cursor.fetchall()
-            
-            lista_concluidas = []
-            for row in rows:
-                lista_concluidas.append({
-                    "id": row[0],
-                    "profissional": row[1],
-                    "date": str(row[2]),
-                    "horario": row[3],
-                    "status": row[4]
-                })
-            
-            return JsonResponse(lista_concluidas, safe=False)
+    consultas = Appointment.objects.filter(
+        user=request.user,
+        status=Appointment.STATUS_COMPLETED,
+    ).order_by('-date')
 
-        except Exception as e:
-            return JsonResponse({'erro': str(e)}, status=500)
-
-    return JsonResponse({'erro': 'Apenas GET permitido'}, status=405)
+    lista = [
+        {
+            "id": a.id,
+            "profissional": a.profissional,
+            "date": str(a.date),
+            "horario": a.horario,
+            "status": a.status,
+        }
+        for a in consultas
+    ]
+    return Response(lista)
 
 
-@csrf_exempt
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def horarios_ocupados(request, nome_profissional):
-    if request.method == 'GET':
-        try:
-            with connection.cursor() as cursor:
-                # MUDANÇA: Removi o "AND status = 'agendado'"
-                # Agora ele traz TUDO desse médico, não importa o status
-                cursor.execute(
-                    "SELECT date, hora FROM alunos WHERE profissional = %s", 
-                    [nome_profissional]
-                )
-                rows = cursor.fetchall()
-                
-                lista = []
-                for row in rows:
-                    lista.append({
-                        "date": str(row[0]),
-                        "horario": row[1]
-                    })
-                
-            return JsonResponse(lista, safe=False)
-        except Exception as e:
-            return JsonResponse({'erro': str(e)}, status=500)
-            
-    return JsonResponse([], safe=False)
+    # Not filtered by user — needs all bookings for this professional
+    # so the frontend can block already-taken slots.
+    consultas = Appointment.objects.filter(profissional=nome_profissional)
+    lista = [
+        {"date": str(a.date), "horario": a.horario}
+        for a in consultas
+    ]
+    return Response(lista)
 
-@csrf_exempt
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def limpar_historico(request):
-    if request.method == 'DELETE':
-        try:
-            with connection.cursor() as cursor:
-                # O PULO DO GATO: Deleta TUDO que já foi concluído
-                # Os agendamentos futuros ('agendado') continuam lá seguros.
-                cursor.execute("DELETE FROM alunos WHERE status = 'concluido'")
-                
-            return JsonResponse({'mensagem': 'Histórico limpo com sucesso!'})
-        except Exception as e:
-            return JsonResponse({'erro': str(e)}, status=500)
-            
-    return JsonResponse({'erro': 'Método inválido'}, status=405)
+    Appointment.objects.filter(
+        user=request.user,
+        status=Appointment.STATUS_COMPLETED,
+    ).delete()
+    return Response({'mensagem': 'Histórico limpo com sucesso!'})

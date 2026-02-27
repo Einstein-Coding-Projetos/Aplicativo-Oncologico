@@ -1,171 +1,287 @@
-//colocar seu ip
-const API_URL = 'http://192.168.0.185:8000'; 
+import * as SecureStore from 'expo-secure-store';
+import { endpoints } from '../constants/api';
 
-export default {
-  // --- INICIALIZAÇÃO ---
-  async init() {
-    return; // Não precisa criar tabela, o PostgreSQL já tem ela.
+const ACCESS_KEY = 'jwt_access';
+const REFRESH_KEY = 'jwt_refresh';
+const memoryStore = new Map<string, string>();
+
+function getBrowserStorage(): Storage | null {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+async function storageGet(key: string): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(key);
+  } catch {
+    const browserStorage = getBrowserStorage();
+    if (browserStorage) return browserStorage.getItem(key);
+    return memoryStore.get(key) ?? null;
+  }
+}
+
+async function storageSet(key: string, value: string): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(key, value);
+    return;
+  } catch {
+    const browserStorage = getBrowserStorage();
+    if (browserStorage) {
+      browserStorage.setItem(key, value);
+      return;
+    }
+    memoryStore.set(key, value);
+  }
+}
+
+async function storageDelete(key: string): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(key);
+    return;
+  } catch {
+    const browserStorage = getBrowserStorage();
+    if (browserStorage) {
+      browserStorage.removeItem(key);
+      return;
+    }
+    memoryStore.delete(key);
+  }
+}
+
+// ─── Token storage ───────────────────────────────────────────────────────────
+
+async function getAccessToken(): Promise<string | null> {
+  return storageGet(ACCESS_KEY);
+}
+
+async function saveTokens(access: string, refresh: string): Promise<void> {
+  await storageSet(ACCESS_KEY, access);
+  await storageSet(REFRESH_KEY, refresh);
+}
+
+async function clearTokens(): Promise<void> {
+  await storageDelete(ACCESS_KEY);
+  await storageDelete(REFRESH_KEY);
+}
+
+// ─── Token refresh ───────────────────────────────────────────────────────────
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refresh = await storageGet(REFRESH_KEY);
+  if (!refresh) return null;
+
+  try {
+    const res = await fetch(endpoints.tokenRefresh, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh }),
+    });
+
+    if (!res.ok) {
+      await clearTokens();
+      return null;
+    }
+
+    const data = await res.json();
+    await storageSet(ACCESS_KEY, data.access);
+    return data.access;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Authenticated fetch ──────────────────────────────────────────────────────
+// Attaches Bearer token; on 401 tries one refresh then retries once.
+
+async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  let token = await getAccessToken();
+
+  const makeRequest = (t: string | null) =>
+    fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(t ? { Authorization: `Bearer ${t}` } : {}),
+        ...(options.headers ?? {}),
+      },
+    });
+
+  let res = await makeRequest(token);
+
+  if (res.status === 401) {
+    token = await refreshAccessToken();
+    if (token) {
+      res = await makeRequest(token);
+    }
+  }
+
+  return res;
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+const api = {
+
+  // Auth -----------------------------------------------------------------------
+
+  async login(username: string, password: string): Promise<void> {
+    const res = await fetch(endpoints.token, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (!res.ok) throw new Error('Credenciais inválidas');
+
+    const { access, refresh } = await res.json();
+    await saveTokens(access, refresh);
   },
+
+  async register(username: string, password: string, email?: string): Promise<void> {
+    const res = await fetch(endpoints.register, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, email }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.erro ?? 'Erro ao criar conta');
+    }
+  },
+
+  async logout(): Promise<void> {
+    await clearTokens();
+  },
+
+  async isAuthenticated(): Promise<boolean> {
+    const token = await getAccessToken();
+    if (!token) return false;
+
+    const res = await authFetch(endpoints.me, { method: 'GET' });
+    return res.ok;
+  },
+
+  async forgotPassword(email: string): Promise<{ mensagem: string; uid?: string; token?: string }> {
+    const res = await fetch(endpoints.forgotPassword, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.erro ?? 'Nao foi possivel iniciar a recuperacao de senha.');
+    return data;
+  },
+
+  async resetPassword(uid: string, token: string, newPassword: string): Promise<void> {
+    const res = await fetch(endpoints.resetPassword, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid, token, new_password: newPassword }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.erro ?? 'Nao foi possivel redefinir a senha.');
+    }
+  },
+
+  // Appointments ---------------------------------------------------------------
 
   async fetchAppointments() {
-    try {
-      const response = await fetch(`${API_URL}/agendar`);
-      
-      if (!response.ok) {
-        throw new Error(`Erro ao buscar: ${response.status}`);
-      }
-      
-      const data = await response.json();
-
-      // Mapeia o JSON que vem do Python para o App
-      return data.map((item: any) => ({
-        id: item.id.toString(),
-        profissional: item.profissional,
-        date: item.date, // O Python já manda como string (YYYY-MM-DD)
-        horario: item.horario,
-        status: item.status
-      }));
-
-    } catch (error) {
-      console.error("Erro no fetchAppointments:", error);
-      return [];
-    }
+    const res = await authFetch(endpoints.appointmentPending);
+    if (!res.ok) throw new Error(`Erro ao buscar consultas: ${res.status}`);
+    const data = await res.json();
+    return data.map((item: any) => ({
+      id: item.id.toString(),
+      profissional: item.profissional,
+      date: item.date,
+      horario: item.horario,
+      status: item.status,
+    }));
   },
 
-  async createAppointment(payload: { profissional: string, date: string | Date, horario: string }) {
-    // Garante que a data seja YYYY-MM-DD para o banco aceitar
+  async createAppointment(payload: { profissional: string; date: string | Date; horario: string }) {
     let dateString = '';
     if (typeof payload.date === 'string') {
-        dateString = payload.date.substring(0, 10); // Pega só os 10 primeiros caracteres para garantir "YYYY-MM-DD"
+      dateString = payload.date.substring(0, 10);
     } else {
-        const ano = payload.date.getFullYear();
-        const mes = String(payload.date.getMonth() + 1).padStart(2, '0'); //string: nome do mês; pegar o número do mês + 1, pois janeiro é zero; o padStart garante que o mês seja escrito com dois dígitos 
-        const dia = String(payload.date.getDate()).padStart(2, '0');
-        dateString = `${ano}-${mes}-${dia}`;
+      const ano = payload.date.getFullYear();
+      const mes = String(payload.date.getMonth() + 1).padStart(2, '0');
+      const dia = String(payload.date.getDate()).padStart(2, '0');
+      dateString = `${ano}-${mes}-${dia}`;
     }
 
-    try {
-      const response = await fetch(`${API_URL}/agendar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // Enviamos com os nomes que o Python espera ler
-          psicologo: payload.profissional, 
-          dia: dateString,
-          horario: payload.horario
-        }),
-      });
+    const res = await authFetch(endpoints.appointments, {
+      method: 'POST',
+      body: JSON.stringify({ profissional: payload.profissional, date: dateString, horario: payload.horario }),
+    });
 
-      if (!response.ok) {
-         const erro = await response.text();
-         throw new Error(`Erro do Python: ${erro}`);
-      }
-
-      // Se deu certo, retornamos o objeto para a tela atualizar
-      return {
-        id: Date.now().toString(), // ID provisório pra tela não piscar
-        profissional: payload.profissional,
-        date: payload.date, // Mantém o formato original pra tela
-        horario: payload.horario,
-        status: 'agendado',
-      };
-
-    } catch (error) {
-      console.error("Erro ao criar:", error);
-      throw error;
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.erro ?? 'Erro ao agendar');
     }
+
+    return res.json();
   },
 
   async completeAppointment(id: number | string) {
-    try {
-      // Chama a nova rota que criamos
-      const response = await fetch(`${API_URL}/concluir/${id}`, {
-        method: 'POST', // Usando POST para evitar problemas de configuração de PUT
-      });
-      return response.ok;
-    } catch (error) {
-      console.error("Erro ao concluir:", error);
-      return [];
-
-      
-    }
+    const res = await authFetch(endpoints.appointmentConcluir(id), { method: 'POST' });
+    return res.ok;
   },
 
   async fetchConcluidas() {
-    try {
-      const response = await fetch(`${API_URL}/concluidas`);
-      
-      if (!response.ok) {
-        throw new Error(`Erro ao buscar: ${response.status}`);
-      }
-      
-      const data = await response.json();
-
-      // Mapeia o JSON que vem do Python para o App
-      return data.map((item: any) => ({
-        id: item.id.toString(),
-        profissional: item.profissional,
-        date: item.date, // O Python já manda como string (YYYY-MM-DD)
-        horario: item.horario,
-        status: item.status
-      }));
-
-    } catch (error) {
-      console.error("Erro no fetchConcluidas:", error);
-      return [];
-    }
+    const res = await authFetch(endpoints.appointmentCompleted);
+    if (!res.ok) throw new Error(`Erro ao buscar concluídas: ${res.status}`);
+    const data = await res.json();
+    return data.map((item: any) => ({
+      id: item.id.toString(),
+      profissional: item.profissional,
+      date: item.date,
+      horario: item.horario,
+      status: item.status,
+    }));
   },
+
   async fetchHorariosOcupados(nomeProfissional: string) {
-    try {
-      const nomeSeguro=encodeURIComponent(nomeProfissional);
-      const response = await fetch(`${API_URL}/horariosOcupados/${nomeSeguro}`);
-      
-      if (!response.ok) {
-        throw new Error(`Erro ao buscar: ${response.status}`);
-      }
-      
-      const data = await response.json();
-
-      // Mapeia o JSON que vem do Python para o App
-      return data.map((item: any) => ({
-        date: item.date, // O Python já manda como string (YYYY-MM-DD)
-        horario: item.horario,
-        status: item.status
-      }));
-
-    } catch (error) {
-      console.error("Erro no fetchAppointments:", error);
-      return [];
-    }
+    const res = await authFetch(endpoints.appointmentOccupied(nomeProfissional));
+    if (!res.ok) return [];
+    return res.json();
   },
+
+  async deleteAllHistory() {
+    const res = await authFetch(endpoints.appointmentClearDone, { method: 'DELETE' });
+    return res.ok;
+  },
+
+  // User profile ---------------------------------------------------------------
 
   async fetchUserProfile() {
-    try {
-      const response = await fetch(`${API_URL}/api/user-profile/me/`);
-      
-      if (!response.ok) {
-        throw new Error(`Erro ao buscar perfil: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error("Erro ao buscar perfil:", error);
-      return null;
-    }
+    const res = await authFetch(endpoints.userProfile);
+    if (!res.ok) throw new Error(`Erro ao buscar perfil: ${res.status}`);
+    return res.json();
   },
 
-  // --- LIMPAR TODO O HISTÓRICO ---
-  async deleteAllHistory() {
-    try {
-      const response = await fetch(`${API_URL}/limpar-historico/`, {
-        method: 'DELETE',
-      });
-      return response.ok;
-    } catch (error) {
-      console.error("Erro ao limpar histórico:", error);
-      return false;
+  // Relatos --------------------------------------------------------------------
+
+  async fetchRelatoDoDia() {
+    const res = await authFetch(endpoints.relatoDoDia);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 404) {
+        throw new Error(data.mensagem ?? 'Nenhum relato disponível');
+      }
+      throw new Error(data.erro ?? 'Erro ao buscar relato');
     }
-  }
+    return res.json();
+  },
 };
 
+export default api;

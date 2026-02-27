@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
-import { dadosPsicologos } from "../app/data/dadosPsicologos";
+import { dadosPsicologos } from "../assets/data/dadosPsicologos";
 import { Calendar, LocaleConfig } from 'react-native-calendars';
+import api from '../lib/api';
 
 // Configuração do idioma (
 LocaleConfig.locales['br'] = {
@@ -60,34 +61,21 @@ const PsicologosList = () => {
   };
 
   const confirmarAgendamento = async (dia, horario, item) => {
-    console.log("Iniciando agendamento...");
-
-    const novoAgendamento = {
-        psicologo: item ? item.nome: "Nome Desconhecido",
-        dia: dia,
-        horario: horario
-    };
-
-    //colocar seu ip
     try {
-        const resposta = await fetch('http://192.168.0.185:8000/agendar', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(novoAgendamento),
-        });
-
-        if (resposta.ok) {
-            Alert.alert("Sucesso", "Agendamento realizado!");
-        } else {
-            const erro = await resposta.text();
-            Alert.alert("Erro", "Falha ao agendar: " + erro);
-        }
-
+      await api.createAppointment({
+        profissional: item ? item.nome : "Nome Desconhecido",
+        date: dia,
+        horario,
+      });
+      Alert.alert("Sucesso", "Agendamento realizado!");
+      const dadosBrutos = await api.fetchHorariosOcupados(item.nome);
+      const dadosLimpos = dadosBrutos.map(item => ({
+        date: item.date,
+        horario: item.horario.substring(0, 5)
+      }));
+      setHorariosAgendados(dadosLimpos);
     } catch (error) {
-        console.log("Erro de conexão:", error);
-        Alert.alert("Erro", "Não foi possível conectar ao servidor.");
+      Alert.alert("Erro", error?.message ?? "Não foi possível realizar o agendamento.");
     }
   };
 
@@ -129,28 +117,13 @@ const PsicologosList = () => {
       const datasReais = calcularDatasFuturas(item.dias); //define os dias transformados em números 
       setDatasCalculadas(datasReais); //armazena essas datas
 
-      //colocar seu ip
       try {
-        const nomeSeguro = encodeURIComponent(item.nome);
-        const resposta = await fetch(`http://192.168.0.185:8000/horarios-ocupados/${nomeSeguro}`);
-        
-        if (resposta.ok) {
-            const dadosBrutos = await resposta.json();
-            console.log("--------------------------------");
-console.log("Médico pesquisado:", item.nome);
-console.log("O que o banco encontrou:", dadosBrutos);
-console.log("--------------------------------");
-            
-            // --- A MÁGICA ACONTECE AQUI ---
-            // Vamos criar uma nova lista limpa, garantindo que o horário tenha só 5 letras (00:00)
-            const dadosLimpos = dadosBrutos.map(item => ({
-                date: item.date,                 // Mantém a data
-                horario: item.horario.substring(0, 5) // Corta "14:00:00" para "14:00"
-            }));
-
-            console.log("Horários ocupados (Limpos):", dadosLimpos); // Para você conferir no terminal
-            setHorariosAgendados(dadosLimpos); 
-        }
+        const dadosBrutos = await api.fetchHorariosOcupados(item.nome);
+        const dadosLimpos = dadosBrutos.map(item => ({
+            date: item.date,                 // Mantém a data
+            horario: item.horario.substring(0, 5) // Corta "14:00:00" para "14:00"
+        }));
+        setHorariosAgendados(dadosLimpos);
       } catch (error) {
         console.error("Erro ao buscar horários ocupados:", error);
       }

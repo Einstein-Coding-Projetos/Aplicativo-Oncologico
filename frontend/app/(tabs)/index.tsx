@@ -1,181 +1,179 @@
-import { Image, StyleSheet, Platform, TouchableOpacity, ScrollView, View, Text } from 'react-native';
-import { HelloWave } from '../../components/hello-wave';
-import ParallaxScrollView from '../../components/parallax-scroll-view';
-import { ThemedText } from '../../components/themed-text';
-import { ThemedView } from '../../components/themed-view';
-import TreatmentProgress from '../../components/TreatmentProgress';
-import TreatmentProgressBar from '../../components/TreatmentProgressBar';
-import StreakCounter from '../../components/StreakCounter';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAppContext } from '../../context/AppContext';
 import api from '../../lib/api';
-import { endpoints } from '../../constants/api';
 
-export default function HomeScreen() {
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [activityToday, setActivityToday] = useState(false);
+type Appointment = {
+  id: string;
+  profissional: string;
+  date: string;
+  horario: string;
+  status: string;
+};
 
-  const fetchProfile = useCallback(async () => {
+function formatDate(value: string): string {
+  const [y, m, d] = value.split('-');
+  if (!y || !m || !d) return value;
+  return `${d}/${m}/${y}`;
+}
+
+export default function ProgressScreen() {
+  const { entries, progress, dailyTaskCompleted } = useAppContext();
+  const [nextAppointment, setNextAppointment] = useState<Appointment | null>(null);
+
+  const loadNextAppointment = useCallback(async () => {
     try {
-      const response = await fetch(endpoints.userProfile);
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Profile data:', data);
-        setUserProfile(data.profile || data);
-        setActivityToday(data.profile?.today_activity_completed ?? false);
+      const data = await api.fetchAppointments();
+      if (data.length > 0) {
+        const sorted = [...data].sort(
+          (a: Appointment, b: Appointment) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+        setNextAppointment(sorted[0]);
+      } else {
+        setNextAppointment(null);
       }
-    } catch (error) {
-      console.error('Erro ao carregar perfil:', error);
-    } finally {
-      setLoading(false);
+    } catch {
+      setNextAppointment(null);
     }
   }, []);
 
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
-
-  // Recarrega quando a tela ganha foco
   useFocusEffect(
     useCallback(() => {
-      fetchProfile();
-    }, [fetchProfile])
+      loadNextAppointment();
+    }, [loadNextAppointment])
   );
 
-  const handleToggleActivity = async () => {
-    try {
-      // Aqui você pode chamar uma API para registrar a atividade
-      setActivityToday(!activityToday);
-      // Depois recarrega o perfil para atualizar o streak
-      await fetchProfile();
-    } catch (error) {
-      console.error('Erro ao registrar atividade:', error);
-    }
-  };
+  const thisWeekCount = useMemo(() => {
+    const now = new Date();
+    const weekAgo = new Date();
+    weekAgo.setDate(now.getDate() - 7);
+    return entries.filter((entry) => new Date(entry.date) >= weekAgo).length;
+  }, [entries]);
+
+  const moodAverage = useMemo(() => {
+    if (!entries.length) return 0;
+    return entries.reduce((acc, item) => acc + item.mood, 0) / entries.length;
+  }, [entries]);
+
+  const healthAverages = useMemo(() => {
+    const avg = (key: keyof (typeof entries)[number]['metrics']) => {
+      const filled = entries.filter((item) => item.metrics[key] > 0);
+      if (!filled.length) return 0;
+      const total = filled.reduce((acc, item) => acc + item.metrics[key], 0);
+      return total / filled.length;
+    };
+
+    return {
+      nausea: avg('nausea'),
+      pain: avg('pain'),
+      mobility: avg('mobility'),
+      energy: avg('energy'),
+      appetite: avg('appetite'),
+    };
+  }, [entries]);
+
+  const healthCards = [
+    { label: 'Enjoo', value: healthAverages.nausea, icon: 'water-outline' as const, gradient: ['#516A92', '#3E547A'] },
+    { label: 'Dor', value: healthAverages.pain, icon: 'bandage-outline' as const, gradient: ['#5E6288', '#464F78'] },
+    { label: 'Mobilidade', value: healthAverages.mobility, icon: 'walk-outline' as const, gradient: ['#4B6D86', '#39566D'] },
+    { label: 'Energia', value: healthAverages.energy, icon: 'flash-outline' as const, gradient: ['#4B6898', '#3D5380'] },
+    { label: 'Apetite', value: healthAverages.appetite, icon: 'restaurant-outline' as const, gradient: ['#5F667F', '#4A536F'] },
+  ];
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#C7D2FE', dark: '#1e1b4b' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Bem-vindo ao Gradatim!</ThemedText>
-        <HelloWave />
-      </ThemedView>
+    <SafeAreaView className="flex-1 bg-[#070F21]">
+      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+        <LinearGradient colors={['#1B2A49', '#243A61', '#2A446D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 12, padding: 16 }}>
+          <View className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/20" />
+          <View className="absolute -left-10 -bottom-10 h-28 w-28 rounded-full bg-indigo-200/20" />
+          <Text className="text-2xl font-black text-white">Progresso</Text>
+          <Text className="mt-1 text-sm text-blue-100">Visao de desempenho, sintomas e consistencia.</Text>
 
-      {/* Barra de progresso do tratamento - NO TOPO */}
-      {!loading && userProfile && (
-        <TreatmentProgressBar
-          currentValue={userProfile.current_day ?? 0}
-          maxValue={userProfile.treatment_duration_days ?? 1}
-        />
-      )}
-
-      {/* Streak Counter - LOGO ABAIXO */}
-      {!loading && userProfile && (
-        <StreakCounter streakDays={userProfile.activity_streak ?? 0} />
-      )}  
-
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Seu companheiro diário</ThemedText>
-        <ThemedText>
-          O Gradatim está aqui para apoiar sua jornada oncológica com ferramentas para seu bem-estar.
-        </ThemedText>
-      </ThemedView>
-
-      {/* Componente de Progressão de Tratamento */}
-      {!loading && userProfile && (
-        <TreatmentProgress
-          currentDay={userProfile.current_day}
-          totalDays={userProfile.treatment_duration_days}
-          treatmentStartDate={userProfile.treatment_start_date}
-          progressPercent={userProfile.treatment_progress_percent}
-        />
-      )}
-
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(tabs)/diario')}>
-          <View style={[styles.iconBox, { backgroundColor: '#EEF2FF' }]}>
-            <Ionicons name="book" size={32} color="#5E60CE" />
+          <View className="mt-4 rounded-md bg-white/10 p-3">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xs font-bold uppercase tracking-wide text-blue-50">Jornada do tratamento</Text>
+              <Text className="text-sm font-black text-white">{Math.round(progress * 100)}%</Text>
+            </View>
+            <View className="mt-2 h-3 overflow-hidden rounded-sm bg-white/20">
+              <LinearGradient colors={['#4D86D9', '#3970C1', '#2C5DA5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: '100%', width: `${Math.max(4, progress * 100)}%` }} />
+            </View>
           </View>
-          <ThemedText type="subtitle" style={styles.cardTitle}>Diário</ThemedText>
-          <ThemedText style={styles.cardText}>Registre como você se sente hoje.</ThemedText>
-        </TouchableOpacity>
+        </LinearGradient>
 
-        <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(tabs)/agendamento')}>
-           <View style={[styles.iconBox, { backgroundColor: '#E0F2FE' }]}>
-            <Ionicons name="calendar" size={32} color="#4EA8DE" />
-          </View>
-          <ThemedText type="subtitle" style={styles.cardTitle}>Agendar</ThemedText>
-          <ThemedText style={styles.cardText}>Marque consultas com psicólogos.</ThemedText>
-        </TouchableOpacity>
+        <View className="mt-4 flex-row gap-2">
+          <LinearGradient colors={['#2D5CA1', '#3E73B8']} style={{ flex: 1, borderRadius: 10, padding: 12 }}>
+            <Ionicons name="albums-outline" size={18} color="#fff" />
+            <Text className="mt-2 text-xl font-black text-white">{entries.length}</Text>
+            <Text className="mt-1 text-xs font-semibold text-blue-100">Registros totais</Text>
+          </LinearGradient>
 
-        <TouchableOpacity style={styles.actionCard} onPress={() => router.push('/(tabs)/relatos')}>
-           <View style={[styles.iconBox, { backgroundColor: '#F3E8FF' }]}>
-            <Ionicons name="chatbubbles" size={32} color="#6930C3" />
+          <LinearGradient colors={['#8A5A3C', '#9C6648']} style={{ flex: 1, borderRadius: 10, padding: 12 }}>
+            <Ionicons name="pulse-outline" size={18} color="#fff" />
+            <Text className="mt-2 text-xl font-black text-white">{thisWeekCount}</Text>
+            <Text className="mt-1 text-xs font-semibold text-amber-100">Ultimos 7 dias</Text>
+          </LinearGradient>
+
+          <LinearGradient colors={['#4D5E88', '#3F5177']} style={{ flex: 1, borderRadius: 10, padding: 12 }}>
+            <Ionicons name="heart-outline" size={18} color="#fff" />
+            <Text className="mt-2 text-xl font-black text-white">{moodAverage ? moodAverage.toFixed(1) : '--'}</Text>
+            <Text className="mt-1 text-xs font-semibold text-slate-200">Media de humor</Text>
+          </LinearGradient>
+        </View>
+
+        <View className="mt-4 rounded-md border border-[#243354] bg-[#0E1A33] p-4">
+          <Text className="text-base font-black text-white">Indicadores autodeclarados</Text>
+          <Text className="mt-1 text-xs text-blue-200">Escala media de 0 a 5 preenchida no check-in</Text>
+          <View className="mt-3 flex-row flex-wrap gap-2">
+            {healthCards.map((card) => (
+              <LinearGradient key={card.label} colors={card.gradient as [string, string]} style={{ width: '48%', borderRadius: 10, padding: 10 }}>
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-sm font-bold text-white">{card.label}</Text>
+                  <Ionicons name={card.icon} size={16} color="#fff" />
+                </View>
+                <Text className="mt-2 text-lg font-black text-white">{entries.length ? card.value.toFixed(1) : '--'}</Text>
+              </LinearGradient>
+            ))}
           </View>
-          <ThemedText type="subtitle" style={styles.cardTitle}>Relatos</ThemedText>
-          <ThemedText style={styles.cardText}>Leia histórias inspiradoras.</ThemedText>
-        </TouchableOpacity>
-      </View>
-    </ParallaxScrollView>
+        </View>
+
+        <View className="mt-4 rounded-md border border-[#243354] bg-[#0E1A33] p-4">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-base font-black text-white">Proximo agendamento</Text>
+            <Ionicons name="calendar-outline" size={18} color="#7DD3FC" />
+          </View>
+          {nextAppointment ? (
+            <View className="mt-3 rounded-md border border-blue-400/40 bg-blue-500/20 p-3">
+              <Text className="text-sm font-bold text-white">{nextAppointment.profissional}</Text>
+              <Text className="mt-1 text-sm text-blue-100">{formatDate(nextAppointment.date)} as {nextAppointment.horario}</Text>
+            </View>
+          ) : (
+            <View className="mt-3 rounded-md border border-orange-300/40 bg-orange-500/20 p-3">
+              <Text className="text-sm text-orange-100">Nenhum evento futuro encontrado.</Text>
+              <Pressable className="mt-3 self-start rounded-md bg-[#F97316] px-4 py-2" onPress={() => router.push('/(tabs)/agendamento')}>
+                <Text className="font-semibold text-white">Agendar consulta</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        <View className="mt-4 rounded-md border border-[#243354] bg-[#0E1A33] p-4">
+          <Text className="text-base font-black text-white">Acoes rapidas</Text>
+          <View className="mt-3 gap-2">
+            <Pressable onPress={() => router.push('/(tabs)/diario')} className="rounded-md border border-cyan-300/30 bg-cyan-500/20 p-3">
+              <Text className="font-semibold text-white">Registrar no diario</Text>
+              <Text className="text-xs text-cyan-100">{dailyTaskCompleted ? 'Entrada de hoje concluida' : 'Complete o check-in de hoje'}</Text>
+            </Pressable>
+            <Pressable onPress={() => router.push('/(tabs)/relatos')} className="rounded-md border border-orange-300/30 bg-orange-500/20 p-3">
+              <Text className="font-semibold text-white">Ler conteudo do dia</Text>
+              <Text className="text-xs text-orange-100">Relatos e educacao em saude</Text>
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 24,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-  actionsContainer: {
-    gap: 16,
-  },
-  actionCard: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    // Shadow for iOS
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    // Elevation for Android
-    elevation: 3,
-  },
-  iconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  cardTitle: {
-    marginBottom: 4,
-  },
-  cardText: {
-    color: '#6b7280',
-    fontSize: 14,
-  },
-});

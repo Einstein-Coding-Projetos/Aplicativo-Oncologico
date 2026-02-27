@@ -40,7 +40,13 @@
         }
       ],
       "expo-sqlite",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permita acesso as fotos para adicionar imagens ao diario."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
