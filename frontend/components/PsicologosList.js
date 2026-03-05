@@ -70,7 +70,7 @@ const PsicologosList = () => {
 
     //colocar seu ip
     try {
-        const resposta = await fetch('http://192.168.0.185:8000/agendar', {
+        const resposta = await fetch('http://ip:8000/agendar', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ const PsicologosList = () => {
       //colocar seu ip
       try {
         const nomeSeguro = encodeURIComponent(item.nome);
-        const resposta = await fetch(`http://192.168.0.185:8000/horarios-ocupados/${nomeSeguro}`);
+        const resposta = await fetch(`http://ip:8000/horarios-ocupados/${nomeSeguro}`);
         
         if (resposta.ok) {
             const dadosBrutos = await resposta.json();
