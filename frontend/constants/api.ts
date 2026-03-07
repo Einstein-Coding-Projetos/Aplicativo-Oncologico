@@ -1,8 +1,4 @@
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
-
-export const endpoints = {
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000'
-};
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 export const endpoints = {
   // Auth
