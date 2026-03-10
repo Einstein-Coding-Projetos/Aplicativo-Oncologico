@@ -1,288 +1,206 @@
-import { StyleSheet, Text, View, Pressable, FlatList } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import api from '@/lib/api';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import api from '../../lib/api';
 
-interface Appointment {
+type Slot = { date: string; horario: string };
+
+type Service = {
   id: string;
-  title: string;
-  date: string;
-  horario: string;
-  status: string;
+  name: string;
+  professional: string;
+  color: string;
+  bg: string;
+};
+
+const services: Service[] = [
+  { id: 'psico-onco', name: 'Psico-oncologia', professional: 'Dra. Helena Martins', color: '#0B63F6', bg: '#DBEAFE' },
+  { id: 'terapia-familiar', name: 'Terapia familiar', professional: 'Dr. Ricardo Alves', color: '#0284C7', bg: '#E0F2FE' },
+  { id: 'tcc', name: 'Terapia cognitiva', professional: 'Dra. Patricia Lima', color: '#EA580C', bg: '#FFEDD5' },
+  { id: 'cuidados', name: 'Cuidados paliativos', professional: 'Dr. Lucas Ferreira', color: '#FB923C', bg: '#FFEDD5' },
+];
+
+const availableTimes = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
+
+function getNextDays(total = 10) {
+  const days = [] as string[];
+  for (let i = 0; i < total; i += 1) {
+    const date = new Date();
+    date.setDate(date.getDate() + i);
+    days.push(date.toISOString().split('T')[0]);
+  }
+  return days;
+}
+
+function formatDate(value: string) {
+  const [, m, d] = value.split('-');
+  return `${d}/${m}`;
 }
 
 export default function AgendamentoScreen() {
-  const colorScheme = useColorScheme();
-  const router = useRouter();
+  const days = useMemo(() => getNextDays(12), []);
+  const [selectedService, setSelectedService] = useState<Service | null>(services[0]);
+  const [selectedDate, setSelectedDate] = useState(days[0]);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [occupied, setOccupied] = useState<Slot[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(false);
 
-  const handleNavigation = () => {
-    router.push("../screens/PsicologoScreen");
-  };
- 
-  // Lista de consultas marcadas (vazia por padrão)
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
- 
-  // Função para adicionar uma consulta
-  const addAppointment = async (profissional: string, date: Date, horario: string, ) => {
-    try {
-      // create on backend
-      const created = await api.createAppointment({ profissional, date, horario});
-      // update local list
-      setAppointments((prev) => [created, ...prev]);
-    } catch (err) {
-      console.error(err);
-      // fallback: optimistic local add
-      setAppointments((prev) => [{ id: Date.now().toString(), profissional, horario, date }, ...prev]);
-    }
-  };
-
-  const load = useCallback(async () => {
-    try {
-      const data = await api.fetchAppointments();
-      const normalized = data.map((d: any) => ({ ...d, date: new Date(d.date).toISOString() }));
-      setAppointments(normalized.filter((a: any) => a.status !== 'concluido'));
-    } catch (err) {
-      console.warn('Falha em carregar consultas', err);
-    }
-  }, []);
-
-  // Ordena consultas por data (mais próxima primeiro)
-  const sortedAppointments = useMemo(() => {
-    return [...appointments].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [appointments]);
-
-  // carregar do backend ao montar
   useEffect(() => {
-    load();
-  }, [load]);
+    const loadOccupied = async () => {
+      if (!selectedService) return;
+      const data = await api.fetchHorariosOcupados(selectedService.professional);
+      setOccupied(data);
+    };
 
-  // Verifica se há consultas
-  const hasAppointments = sortedAppointments.length > 0;
+    loadOccupied();
+  }, [selectedService]);
 
-  // Próxima consulta
-  const nextAppointment = sortedAppointments.length > 0 ? sortedAppointments[0] : undefined;
+  const isOccupied = (time: string) =>
+    occupied.some((slot) => slot.date === selectedDate && slot.horario.startsWith(time));
 
-  const renderAppointment = ({ item }: { item: Appointment }) => {
-    const isNext = nextAppointment ? item.id === nextAppointment.id : false;
-    const formatted = new Date(item.date).toLocaleString();
+  const handleConfirm = async () => {
+    if (!selectedService || !selectedTime) {
+      Alert.alert('Selecione o horario', 'Escolha um horario disponivel para continuar.');
+      return;
+    }
 
-    return (
-      <View
-        style={[
-          styles.appointmentItem,
-          { borderColor: Colors[colorScheme ?? 'light'].tint },
-          isNext && styles.nextAppointment,
-        ]}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={[styles.appointmentTitle, { color: Colors[colorScheme ?? 'light'].text }]}>
-            {item.title}
-          </Text>
-          {isNext && <Text style={styles.nextBadge}>Próxima</Text>}
-        </View>
-        <Text style={[styles.appointmentDate, { color: Colors[colorScheme ?? 'light'].text }]}>
-          {formatted}
-        </Text>
-        {/* Show a manual 'Mark completed' button when not completed */}
-        {item.status !== 'concluído' && (
-          <Pressable
-            style={[styles.completeButton, { backgroundColor: Colors[colorScheme ?? 'light'].tint, marginTop: 10 }]}
-            onPress={async () => {
-              try {
-                await api.completeAppointment(Number(item.id));
-                // refresh lists
-                await load();
-              } catch (e) {
-                console.warn('Falha em marcá-lo como concluído', e);
-              }
-            }}
-          >
-            <Text style={styles.buttonText}>Marcar como concluída</Text>
-          </Pressable>
-        )}
-      </View>
-    );
+    try {
+      setIsSubmitting(true);
+      await api.createAppointment({
+        profissional: selectedService.professional,
+        date: selectedDate,
+        horario: selectedTime,
+      });
+      setIsConfirmed(true);
+      const data = await api.fetchHorariosOcupados(selectedService.professional);
+      setOccupied(data);
+    } catch (error: any) {
+      Alert.alert('Falha ao confirmar', error?.message ?? 'Nao foi possivel concluir o agendamento.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
-
 
   return (
-    <View style={[styles.container, { backgroundColor: Colors[colorScheme ?? 'light'].background }]}>
-      {!hasAppointments ? (
-        // Layout quando NÃO há consultas (botões centralizados)
-        <>
-          <Text style={[styles.title, { color: Colors[colorScheme ?? 'light'].text }]}>
-            Agendamentos
-          </Text>
-          <Text style={[styles.subtitle, { color: Colors[colorScheme ?? 'light'].text }]}>
-            Gerencie suas consultas médicas aqui
-          </Text>
-         
+    <SafeAreaView className="flex-1 bg-[#070F21]">
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 140 }}>
+        <View className="relative overflow-hidden rounded-md border border-[#2A3C60] bg-[#0E1A33] p-4">
+          <View className="absolute -left-8 -top-8 h-24 w-24 rounded-full bg-blue-500/30" />
+          <View className="absolute -right-10 -bottom-10 h-28 w-28 rounded-full bg-orange-500/30" />
+          <Text className="text-2xl font-bold text-white">Agendamento</Text>
+          <Text className="mt-1 text-sm text-blue-100">Fluxo rapido para marcar seu atendimento.</Text>
+        </View>
+
+        <View className="mt-4 rounded-md border border-[#324669] bg-white/10 p-4">
+          <Text className="text-sm font-semibold text-cyan-100">1. Especialidade</Text>
+          <View className="mt-3 gap-2">
+            {services.map((service) => {
+              const active = service.id === selectedService?.id;
+              return (
+                <Pressable
+                  key={service.id}
+                  className="rounded-md border px-4 py-3"
+                  style={{
+                    borderColor: active ? service.color : '#324669',
+                    backgroundColor: active ? 'rgba(255,255,255,0.14)' : '#0F1F3D',
+                  }}
+                  onPress={() => {
+                    setSelectedService(service);
+                    setSelectedTime(null);
+                    setIsConfirmed(false);
+                  }}
+                >
+                  <Text className="font-semibold" style={{ color: active ? service.color : '#E2E8F0' }}>{service.name}</Text>
+                  <Text className="text-xs text-slate-300">{service.professional}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View className="mt-4 rounded-md border border-[#324669] bg-white/10 p-4">
+          <Text className="text-sm font-semibold text-cyan-100">2. Data</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-3">
+            <View className="flex-row gap-2">
+              {days.map((day) => {
+                const active = day === selectedDate;
+                return (
+                  <Pressable
+                    key={day}
+                    className="rounded-md border px-4 py-3"
+                    style={{ borderColor: active ? '#5CC8FF' : '#324669', backgroundColor: active ? 'rgba(92,200,255,0.25)' : '#0F1F3D' }}
+                    onPress={() => {
+                      setSelectedDate(day);
+                      setSelectedTime(null);
+                      setIsConfirmed(false);
+                    }}
+                  >
+                    <Text className="text-sm font-semibold" style={{ color: active ? '#BAE6FD' : '#D2DDF2' }}>{formatDate(day)}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
+
+        <View className="mt-4 rounded-md border border-[#324669] bg-white/10 p-4">
+          <Text className="text-sm font-semibold text-cyan-100">3. Horarios disponiveis</Text>
+          <View className="mt-3 flex-row flex-wrap gap-2">
+            {availableTimes.map((time) => {
+              const blocked = isOccupied(time);
+              const active = selectedTime === time;
+              return (
+                <Pressable
+                  key={time}
+                  className="rounded-md px-4 py-2"
+                  style={{
+                    backgroundColor: blocked ? '#2F3D57' : active ? '#EA580C' : '#0F1F3D',
+                    borderColor: blocked ? '#4E638C' : active ? '#EA580C' : '#324669',
+                    borderWidth: 1,
+                  }}
+                  disabled={blocked}
+                  onPress={() => {
+                    setSelectedTime(time);
+                    setIsConfirmed(false);
+                  }}
+                >
+                  <Text className="font-medium" style={{ color: blocked ? '#94A3B8' : active ? '#fff' : '#D2DDF2' }}>
+                    {blocked ? 'Ocupado' : time}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View className="mt-4 rounded-md border border-[#324669] bg-white/10 p-4">
+          <Text className="text-sm font-semibold text-cyan-100">Resumo</Text>
+          <Text className="mt-2 text-sm text-slate-100">Servico: {selectedService?.name ?? '-'}</Text>
+          <Text className="text-sm text-slate-100">Profissional: {selectedService?.professional ?? '-'}</Text>
+          <Text className="text-sm text-slate-100">Data: {formatDate(selectedDate)}</Text>
+          <Text className="text-sm text-slate-100">Horario: {selectedTime ?? '-'}</Text>
+
           <Pressable
-            style={[styles.button, { backgroundColor: Colors[colorScheme ?? 'light'].tint }]}
-            onPress={handleNavigation}
+            className="mt-4 rounded-md py-3"
+            style={{ backgroundColor: selectedTime ? '#0B63F6' : '#94A3B8' }}
+            onPress={handleConfirm}
+            disabled={!selectedTime || isSubmitting}
           >
-            <Text style={styles.buttonText}>Novo Agendamento</Text>
+            <Text className="text-center font-semibold text-white">
+              {isSubmitting ? 'Confirmando...' : 'Confirmar agendamento'}
+            </Text>
           </Pressable>
 
-
-          <Pressable
-            style={[styles.button, { backgroundColor: Colors[colorScheme ?? 'light'].tint, marginTop: 20 }]}
-            onPress={() => router.push('/consultas_passadas')}
-          >
-            <Text style={styles.buttonText}>Consultas Passadas</Text>
-          </Pressable>
-
-
-          {process.env.NODE_ENV === 'development' && (
-            <Pressable
-              style={[styles.button, { backgroundColor: '#999', marginTop: 20 }]}
-              onPress={() => addAppointment('Dr.Consulta teste', new Date(Date.now() + 24 * 3600 * 1000).toISOString(), '09:00')}
-            >
-              <Text style={styles.buttonText}>Adicionar exemplo</Text>
-            </Pressable>
-          )}
-        </>
-      ) : (
-        // Layout quando HÁ consultas (botões no canto inferior direito)
-        <>
-          <Text style={[styles.title, { color: Colors[colorScheme ?? 'light'].text }]}>
-            Suas Consultas
-          </Text>
-         
-          <FlatList
-            data={sortedAppointments}
-            renderItem={renderAppointment}
-            keyExtractor={(item) => item.id}
-            style={styles.appointmentList}
-            scrollEnabled={true}
-          />
-
-
-          <Pressable
-            style={[styles.floatingButton, { backgroundColor: Colors[colorScheme ?? 'light'].tint }]}
-            onPress={() => router.push('/placeholder')}
-          >
-            <Text style={styles.floatingButtonText}>+</Text>
-          </Pressable>
-
-
-          <Pressable
-            style={[styles.floatingButtonSecondary, { backgroundColor: Colors[colorScheme ?? 'light'].tint }]}
-            onPress={() => router.push('/consultas_passadas')}
-          >
-            <Text style={styles.floatingButtonText}>📋</Text>
-          </Pressable>
-        </>
-      )}
-    </View>
+          {isConfirmed ? (
+            <View className="mt-3 flex-row items-center gap-2 rounded-md border border-emerald-300/40 bg-emerald-500/20 p-3">
+              <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+              <Text className="text-sm text-emerald-100">Agendamento confirmado. Lembrete salvo.</Text>
+            </View>
+          ) : null}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 16,
-    opacity: 0.7,
-    marginBottom: 30,
-  },
-  button: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignSelf: 'center',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  completeButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-  },
-  appointmentList: {
-    flex: 1,
-    width: '100%',
-    marginBottom: 20,
-  },
-  appointmentItem: {
-    padding: 15,
-    marginBottom: 10,
-    borderLeftWidth: 4,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-  },
-  appointmentTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 5,
-  },
-  appointmentDate: {
-    fontSize: 14,
-    opacity: 0.7,
-  },
-  nextAppointment: {
-    backgroundColor: 'rgba(31,122,140,0.06)',
-    borderLeftWidth: 4,
-    borderRadius: 8,
-  },
-  nextBadge: {
-    backgroundColor: '#1f7a8c',
-    color: '#fff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    overflow: 'hidden',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  floatingButton: {
-    position: 'absolute',
-    bottom: 100,
-    right: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  floatingButtonSecondary: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  floatingButtonText: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: 'bold',
-  },
-});

@@ -9,6 +9,10 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Environment variables (nunca commitar)
+.env.local
+.env.*.local
+
 # Native
 .kotlin/
 *.orig.*

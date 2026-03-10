@@ -1,30 +1,46 @@
-# Arquivo .gitignore (na pasta raiz 'Aplicativo-Oncologico')
+# Project .gitignore
 
 # Secrets
 **/.env
+**/.env.*
+!**/.env.example
 
-# --- Arquivos de IDE e OS ---
+# IDE / OS
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 
-# --- Backend (Python/Django) ---
+# Backend (Python / Django)
 backend/__pycache__/
 backend/*.pyc
-*.log
+backend/*.pyo
+backend/*.pyd
 backend/.pytest_cache/
 backend/.coverage
 backend/htmlcov/
-
-# Se você criar um 'venv' local futuramente
 backend/venv/
 backend/env/
-
-# Se você usar o sqlite para testes
 backend/db.sqlite3
+backend/db.sqlite3-journal
+backend/media/
+backend/staticfiles/
+backend/errors.log
 
-# --- Frontend (Node/Expo) ---
+# Python generic cache/tooling
+__pycache__/
+**/__pycache__/
+**/*.pyc
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+
+# Logs / PIDs
+*.log
+*.pid
+
+# Frontend (Node / Expo)
 frontend/node_modules/
 frontend/.expo/
 frontend/npm-debug.log*
@@ -37,14 +53,11 @@ frontend/.expo-shared/
 frontend/.turbo/
 frontend/.parcel-cache/
 
-__pycache__/
-**/__pycache__/
-**/*.pyc
-
-# Django uploads/build artifacts
-backend/media/
-backend/staticfiles/
-
-# Docker volumes
+# Docker/local volumes
 postgres-data/
 docker-data/
+
+# Database dumps/backups
+*.sql
+*.dump
+backup_core_appointment.sql

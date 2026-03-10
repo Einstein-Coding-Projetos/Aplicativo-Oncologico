@@ -1,34 +1,107 @@
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.db import connection
-import json
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from django.shortcuts import get_object_or_404
 
-# @csrf_exempt é OBRIGATÓRIO aqui para o React Native conseguir acessar
-# sem precisar de um token de segurança complexo (usar só em desenvolvimento!)
-@csrf_exempt
+from core.models import Appointment
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
 def agendar(request):
-    if request.method == 'POST':
-        try:
-            # 1. Pega os dados que vieram do App
-            dados = json.loads(request.body)
-            print("PEDIDO RECEBIDO:", dados) # Vai aparecer no terminal do Python
+    if request.method == 'GET':
+        consultas = Appointment.objects.filter(user=request.user).order_by('date')
+        lista = [
+            {
+                "id": a.id,
+                "profissional": a.profissional,
+                "date": str(a.date),
+                "horario": a.horario,
+                "status": a.status,
+            }
+            for a in consultas
+        ]
+        return Response(lista)
 
-            # 2. Prepara os dados
-            psicologo = dados.get('psicologo')
-            dia = dados.get('dia')
-            horario = dados.get('horario')
+    # POST
+    profissional = request.data.get('psicologo')
+    dia = request.data.get('dia')
+    horario = request.data.get('horario')
 
-            # 3. Executa o SQL direto no banco
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "INSERT INTO agendamentos (nome_psicologo, dia, horario) VALUES (%s, %s, %s)",
-                    [psicologo, dia, horario]
-                )
+    if not all([profissional, dia, horario]):
+        return Response(
+            {'erro': 'Os campos psicologo, dia e horario são obrigatórios.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
-            return JsonResponse({'mensagem': 'Agendado com sucesso!'}, status=201)
+    appointment = Appointment.objects.create(
+        user=request.user,
+        profissional=profissional,
+        date=dia,
+        horario=horario,
+        status=Appointment.STATUS_SCHEDULED,
+    )
 
-        except Exception as e:
-            print("ERRO:", e)
-            return JsonResponse({'erro': str(e)}, status=500)
+    return Response(
+        {
+            "id": appointment.id,
+            "profissional": appointment.profissional,
+            "date": str(appointment.date),
+            "horario": appointment.horario,
+            "status": appointment.status,
+        },
+        status=status.HTTP_201_CREATED,
+    )
 
-    return JsonResponse({'erro': 'Método não permitido'}, status=405)
+
+@api_view(['PUT', 'POST'])
+@permission_classes([IsAuthenticated])
+def concluir_consulta(request, id_consulta):
+    appointment = get_object_or_404(Appointment, id=id_consulta, user=request.user)
+    appointment.mark_completed()
+    return Response({'status': 'Atualizado com sucesso'})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def consultas_concluidas(request):
+    consultas = Appointment.objects.filter(
+        user=request.user,
+        status=Appointment.STATUS_COMPLETED,
+    ).order_by('-date')
+
+    lista = [
+        {
+            "id": a.id,
+            "profissional": a.profissional,
+            "date": str(a.date),
+            "horario": a.horario,
+            "status": a.status,
+        }
+        for a in consultas
+    ]
+    return Response(lista)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def horarios_ocupados(request, nome_profissional):
+    # Not filtered by user — needs all bookings for this professional
+    # so the frontend can block already-taken slots.
+    consultas = Appointment.objects.filter(profissional=nome_profissional)
+    lista = [
+        {"date": str(a.date), "horario": a.horario}
+        for a in consultas
+    ]
+    return Response(lista)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def limpar_historico(request):
+    Appointment.objects.filter(
+        user=request.user,
+        status=Appointment.STATUS_COMPLETED,
+    ).delete()
+    return Response({'mensagem': 'Histórico limpo com sucesso!'})
