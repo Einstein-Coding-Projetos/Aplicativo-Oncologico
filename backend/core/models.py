@@ -90,12 +90,14 @@ class UserProfile(models.Model):
             return 0
         return (self.current_day / self.treatment_duration_days) * 100
 
-
 class RelatoCaso(models.Model):
-    titulo = models.CharField(max_length=255)
-    subtitulo = models.CharField(max_length=255, blank=True, null=True)
-    conteudo = models.TextField()
+    titulo = models.CharField(max_length=255, blank=True, null=True)
+    subtitulo = models.CharField(max_length=300)
+    texto = models.TextField()
+    ativo = models.BooleanField(default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+    exibido_em = models.DateField(null=True, blank=True)
+    fonte = models.CharField(max_length=200, null=True, blank=True)
 
     def __str__(self):
         return self.titulo

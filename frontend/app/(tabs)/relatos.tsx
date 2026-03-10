@@ -1,116 +1,170 @@
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAppContext } from '../../context/AppContext';
-import api from '../../lib/api';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 type Relato = {
   id: number;
   titulo: string;
-  subtitulo?: string | null;
-  conteudo: string;
-  data?: string;
+  subtitulo: string;
+  texto: string;
+  fonte: string;
+  data: string;
 };
 
-function getReadingTime(text: string): number {
-  const words = text.trim().split(/\s+/).filter(Boolean).length;
-  return Math.max(1, Math.ceil(words / 200));
-}
+export default function Relatos() {
+  const [favoritos, setFavoritos] = useState<Relato[]>([]);
+  const [relatoDoDia, setRelatoDoDia] = useState<Relato | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [expandido, setExpandido] = useState(false);
+  const router = useRouter();
 
-export default function RelatosScreen() {
-  const { dailyTaskCompleted } = useAppContext();
-  const [relato, setRelato] = useState<Relato | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    carregarFavoritos();
+    buscarRelatoDoDia();
+  }, []);
 
-  const loadRelato = useCallback(async () => {
+  async function buscarRelatoDoDia() {
     try {
-      setLoading(true);
-      setError(null);
-      const data = await api.fetchRelatoDoDia();
-      setRelato(data);
-    } catch (err: any) {
-      const message = err?.message ?? 'Falha ao carregar o relato do dia.';
-      if (message.toLowerCase().includes('nenhum relato')) {
-        setRelato(null);
-        setError(null);
-      } else {
-        setError(message);
-      }
+      const response = await fetch(
+        "http://127.0.0.1:8000/api/relato-do-dia"
+      );
+
+      const data = await response.json();
+      setRelatoDoDia(data);
+    } catch (error) {
+      console.log("Erro ao buscar relato:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }
 
-  useEffect(() => {
-    if (!dailyTaskCompleted) return;
-    loadRelato();
-  }, [dailyTaskCompleted, loadRelato]);
+  async function carregarFavoritos() {
+    const dados = await AsyncStorage.getItem("favoritos");
+    if (dados) {
+      setFavoritos(JSON.parse(dados));
+    }
+  }
 
-  if (!dailyTaskCompleted) {
+  async function toggleFavorito(relato: Relato) {
+    let novosFavoritos;
+    const jaExiste = favoritos.find((item) => item.id === relato.id);
+
+    if (jaExiste) {
+      novosFavoritos = favoritos.filter((item) => item.id !== relato.id);
+    } else {
+      novosFavoritos = [...favoritos, relato];
+    }
+
+    setFavoritos(novosFavoritos);
+    await AsyncStorage.setItem("favoritos", JSON.stringify(novosFavoritos));
+  }
+
+  if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-[#070F21] p-5">
-        <LinearGradient colors={['#1F3B8A', '#0EA5E9']} style={{ borderRadius: 10, padding: 18 }}>
-          <Text className="text-2xl font-black text-white">Relatos</Text>
-          <Text className="mt-1 text-sm text-blue-100">Conteudo educativo diario</Text>
-          <View className="mt-5 rounded-md border border-orange-200/50 bg-orange-500/20 p-6">
-            <Ionicons name="lock-closed" size={24} color="#FDBA74" />
-            <Text className="mt-3 text-base font-bold text-white">Conteudo bloqueado</Text>
-            <Text className="mt-2 text-sm leading-6 text-orange-100">
-              Complete seu check-in diario no botao flutuante para desbloquear o relato de hoje.
-            </Text>
-          </View>
-        </LinearGradient>
+      <SafeAreaView style={styles.safe}>
+        <ActivityIndicator size="large" style={{ marginTop: 50 }} />
       </SafeAreaView>
     );
   }
 
+  if (!relatoDoDia) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <Text>Não foi possível carregar o relato.</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const ehFavorito = favoritos.some(
+    (item) => item.id === relatoDoDia.id
+  );
+
   return (
-    <SafeAreaView className="flex-1 bg-[#070F21]">
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 140 }}>
-        <LinearGradient colors={['#1E3A8A', '#4F46E5', '#0EA5E9']} style={{ borderRadius: 10, padding: 16 }}>
-          <Text className="text-2xl font-black text-white">Relato do dia</Text>
-          <Text className="mt-1 text-sm text-blue-100">Leitura orientada para autocuidado e clareza emocional.</Text>
-        </LinearGradient>
+    <SafeAreaView style={styles.safe}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <TouchableOpacity
+          style={[
+            styles.widgetPrincipal,
+            expandido && styles.widgetExpandido,
+          ]}
+          activeOpacity={0.95}
+          onPress={() => setExpandido(!expandido)}
+        >
+          <View style={styles.headerRelato}>
+            <Text style={styles.titulo}>
+              {relatoDoDia.titulo}
+            </Text>
 
-        {loading ? (
-          <View className="mt-4 rounded-md border border-[#314466] bg-[#0E1A33] p-4">
-            <Text className="text-sm text-slate-200">Carregando relato...</Text>
+            <TouchableOpacity
+              onPress={() => toggleFavorito(relatoDoDia)}
+            >
+              <Ionicons
+                name={ehFavorito ? "star" : "star-outline"}
+                size={28}
+                color="#F4B400"
+              />
+            </TouchableOpacity>
           </View>
-        ) : null}
 
-        {!loading && error ? (
-          <View className="mt-4 rounded-md border border-red-300/40 bg-red-500/20 p-4">
-            <Text className="text-sm text-red-100">{error}</Text>
-            <Pressable className="mt-3 self-start rounded-md bg-red-500 px-4 py-2" onPress={loadRelato}>
-              <Text className="font-semibold text-white">Tentar novamente</Text>
-            </Pressable>
-          </View>
-        ) : null}
+          <Text style={styles.subtitulo}>
+            {relatoDoDia.subtitulo}
+          </Text>
 
-        {!loading && !error && !relato ? (
-          <View className="mt-4 rounded-md border border-orange-300/40 bg-orange-500/20 p-4">
-            <Text className="text-sm text-orange-100">Nenhum relato disponível no momento.</Text>
-          </View>
-        ) : null}
+          <Text style={styles.texto}>
+            {expandido
+              ? relatoDoDia.texto
+              : relatoDoDia.texto.substring(0, 180) + "..."}
+          </Text>
 
-        {!loading && !error && relato ? (
-          <View className="mt-4 overflow-hidden rounded-md border border-[#314466] bg-[#0E1A33] p-4">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-xs font-bold uppercase tracking-wide text-cyan-300">Destaque de hoje</Text>
-              <View className="rounded-md bg-orange-500/30 px-2 py-1">
-                <Text className="text-xs font-semibold text-orange-100">{getReadingTime(relato.conteudo)} min</Text>
-              </View>
-            </View>
-            <Text className="mt-2 text-xl font-black text-white">{relato.titulo}</Text>
-            {relato.subtitulo ? <Text className="mt-1 text-sm text-blue-200">{relato.subtitulo}</Text> : null}
-            <Text className="mt-3 text-sm leading-6 text-slate-200">{relato.conteudo}</Text>
-          </View>
-        ) : null}
+          <Text style={styles.verMais}>
+            {expandido ? "Ver menos" : "Toque para ler completo"}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.widgetFavoritos}>
+          <Text style={styles.tituloSecundario}>
+            ⭐ Relatos Favoritados
+          </Text>
+
+          {favoritos.length === 0 ? (
+            <Text style={styles.vazio}>
+              Você ainda não favoritou nenhum relato.
+            </Text>
+          ) : (
+            favoritos.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.itemFavorito}
+                onPress={() =>
+                  router.push({
+                    pathname: "/relato/[id]",
+                    params: {
+                      id: item.id,
+                      titulo: item.titulo,
+                      subtitulo: item.subtitulo,
+                      texto: item.texto,
+                    },
+                  })
+                }
+              >
+                <Text style={styles.tituloFavorito}>
+                  {item.titulo}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
-

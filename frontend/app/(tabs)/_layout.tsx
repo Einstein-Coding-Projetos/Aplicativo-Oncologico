@@ -42,7 +42,9 @@ export default function TabsLayout() {
           name="diario"
           options={{
             title: 'Diario',
-            tabBarIcon: ({ color }) => <IconSymbol size={22} name="book.fill" color={color} />,
+            tabBarIcon: ({ color }) => (
+              <IconSymbol size={22} name="book.fill" color={color} />
+            ),
           }}
         />
 
@@ -50,7 +52,9 @@ export default function TabsLayout() {
           name="index"
           options={{
             title: 'Progresso',
-            tabBarIcon: ({ color, size }) => <Ionicons name="stats-chart" size={size} color={color} />,
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="stats-chart" size={size} color={color} />
+            ),
           }}
         />
 
@@ -58,7 +62,9 @@ export default function TabsLayout() {
           name="relatos"
           options={{
             title: 'Relatos',
-            tabBarIcon: ({ color }) => <IconSymbol size={22} name="paperplane.fill" color={color} />,
+            tabBarIcon: ({ color }) => (
+              <IconSymbol size={22} name="paperplane.fill" color={color} />
+            ),
           }}
         />
 
@@ -66,7 +72,9 @@ export default function TabsLayout() {
           name="agendamento"
           options={{
             title: 'Agenda',
-            tabBarIcon: ({ color, size }) => <Ionicons name="calendar" color={color} size={size} />,
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="calendar" color={color} size={size} />
+            ),
           }}
         />
 
@@ -74,12 +82,19 @@ export default function TabsLayout() {
           name="perfil"
           options={{
             title: 'Perfil',
-            tabBarIcon: ({ color, size }) => <Ionicons name="person-circle" color={color} size={size} />,
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="person-circle" color={color} size={size} />
+            ),
           }}
         />
 
+        {/* histórico não aparece na tab */}
         <Tabs.Screen name="historico" options={{ href: null }} />
+
+        {/* página de detalhe do relato */}
+        <Tabs.Screen name="relato/[id]" options={{ href: null }} />
       </Tabs>
+
       <DailyCheckinFab />
     </View>
   );
