@@ -38,61 +38,58 @@ export default function TabsLayout() {
           tabBarButton: HapticTab,
         }}
       >
-        <Tabs.Screen
-          name="diario"
-          options={{
-            title: 'Diario',
-            tabBarIcon: ({ color }) => (
-              <IconSymbol size={22} name="book.fill" color={color} />
-            ),
-          }}
-        />
 
         <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Progresso',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="stats-chart" size={size} color={color} />
-            ),
-          }}
-        />
+        name="diario"
+        options={{
+          title: "Diario",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={22} name="book.fill" color={color} />
+          ),
+        }}
+      />
 
-        <Tabs.Screen
-          name="relatos"
-          options={{
-            title: 'Relatos',
-            tabBarIcon: ({ color }) => (
-              <IconSymbol size={22} name="paperplane.fill" color={color} />
-            ),
-          }}
-        />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Progresso",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="stats-chart" size={size} color={color} />
+          ),
+        }}
+      />
 
-        <Tabs.Screen
-          name="agendamento"
-          options={{
-            title: 'Agenda',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="calendar" color={color} size={size} />
-            ),
-          }}
-        />
+      <Tabs.Screen
+        name="relatos"
+        options={{
+          title: "Relatos",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={22} name="paperplane.fill" color={color} />
+          ),
+        }}
+      />
 
-        <Tabs.Screen
-          name="perfil"
-          options={{
-            title: 'Perfil',
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person-circle" color={color} size={size} />
-            ),
-          }}
-        />
+      <Tabs.Screen
+        name="agendamento"
+        options={{
+          title: "Agenda",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar" color={color} size={size} />
+          ),
+        }}
+      />
 
-        {/* histórico não aparece na tab */}
-        <Tabs.Screen name="historico" options={{ href: null }} />
+      <Tabs.Screen
+        name="perfil"
+        options={{
+          title: "Perfil",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-circle" color={color} size={size} />
+          ),
+        }}
+      />
 
-        {/* página de detalhe do relato */}
-        <Tabs.Screen name="relato/[id]" options={{ href: null }} />
+      <Tabs.Screen name="historico" options={{ href: null }} />
       </Tabs>
 
       <DailyCheckinFab />

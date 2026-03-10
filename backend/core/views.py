@@ -14,50 +14,42 @@ from .serializers import AppointmentSerializer, RelatoCasoSerializer, UserProfil
 
 def relato_do_dia(request):
     hoje = date.today()
+    total = RelatoCaso.objects.count()
 
-    # 1️⃣ Já existe relato exibido hoje?
-    relato_hoje = RelatoCaso.objects.filter(exibido_em=hoje).first()
-    if relato_hoje:
-        return JsonResponse(formatar_relato(relato_hoje))
-
-    # 2️⃣ Relatos ativos que ainda não foram exibidos
-    disponiveis = list(
-        RelatoCaso.objects.filter(ativo=True, exibido_em__isnull=True)
-    )
-
-    # 3️⃣ Se todos já foram exibidos, resetar ciclo
-    if not disponiveis:
-        RelatoCaso.objects.filter(ativo=True).update(exibido_em=None)
-        disponiveis = list(RelatoCaso.objects.filter(ativo=True))
-
-    if not disponiveis:
+    if total == 0:
         return JsonResponse({"mensagem": "Nenhum relato disponível"}, status=404)
 
-    # 4️⃣ Sorteio
-    relato = random.choice(disponiveis)
-    relato.exibido_em = hoje
-    relato.save(update_fields=["exibido_em"])
+    # sempre retorna o mesmo relato durante o dia
+    random.seed(hoje.toordinal())
+    idx = random.randrange(total)
+    relato = RelatoCaso.objects.all().order_by("id")[idx]
 
-    return JsonResponse(formatar_relato(relato))
+    return JsonResponse(formatar_relato(relato, hoje))
 
 
-def formatar_relato(relato):
+def formatar_relato(relato, hoje):
     return {
         "id": relato.id,
         "titulo": relato.titulo,
         "subtitulo": relato.subtitulo,
-        "texto": relato.texto,
-        "fonte": relato.fonte,
-        "data": str(relato.exibido_em),
+        "conteudo": relato.conteudo,
+        "fonte": getattr(relato, "fonte", None),
+        "data": str(hoje),
     }
 
 
 def relato_aleatorio(request):
     relato = RelatoCaso.objects.order_by(Random()).first()
+
     if not relato:
         return JsonResponse({"mensagem": "Nenhum relato disponível"}, status=404)
 
-    return JsonResponse(formatar_relato(relato))
+    return JsonResponse({
+        "id": relato.id,
+        "titulo": relato.titulo,
+        "subtitulo": relato.subtitulo,
+        "conteudo": relato.conteudo,
+    })
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
@@ -75,6 +67,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         appointments = self.get_queryset().filter(
             status__in=[Appointment.STATUS_SCHEDULED, Appointment.STATUS_PENDING]
         ).order_by("date")
+
         serializer = self.get_serializer(appointments, many=True)
         return Response(serializer.data)
 
@@ -83,6 +76,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         appointments = self.get_queryset().filter(
             status=Appointment.STATUS_COMPLETED
         ).order_by("-date")
+
         serializer = self.get_serializer(appointments, many=True)
         return Response(serializer.data)
 
@@ -90,19 +84,23 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     def mark_completed(self, request, pk=None):
         appointment = self.get_object()
         appointment.mark_completed()
+
         serializer = self.get_serializer(appointment)
         return Response(serializer.data)
 
     @action(detail=False, methods=["get"], url_path="occupied-slots")
     def occupied_slots(self, request):
         profissional = request.query_params.get("profissional", "").strip()
+
         if not profissional:
             return Response(
                 {"erro": 'O parâmetro "profissional" é obrigatório.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        occupied = Appointment.objects.filter(profissional=profissional).filter(
+        occupied = Appointment.objects.filter(
+            profissional=profissional
+        ).filter(
             status__in=[Appointment.STATUS_SCHEDULED, Appointment.STATUS_PENDING]
         ).order_by("date", "horario")
 
@@ -136,5 +134,6 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def me(self, request):
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
         serializer = self.get_serializer(profile)
         return Response(serializer.data)
