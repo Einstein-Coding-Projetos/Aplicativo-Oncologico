@@ -57,13 +57,14 @@ class UserProfile(models.Model):
 
     criado_em = models.DateTimeField(auto_now_add=True)
 
-
 class RelatoCaso(models.Model):
-    titulo = models.CharField(max_length=255)
-    subtitulo = models.CharField(max_length=255, blank=True, null=True)
-    conteudo = models.TextField()
+    titulo = models.CharField(max_length=255, blank=True, null=True)
+    subtitulo = models.CharField(max_length=300)
+    texto = models.TextField()
+    ativo = models.BooleanField(default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+    exibido_em = models.DateField(null=True, blank=True)
+    fonte = models.CharField(max_length=200, null=True, blank=True)
 
     def __str__(self):
         return self.titulo
-    

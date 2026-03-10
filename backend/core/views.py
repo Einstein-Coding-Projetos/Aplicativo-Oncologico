@@ -3,44 +3,39 @@ from datetime import date
 from django.http import JsonResponse
 from .models import RelatoCaso
 
+
 def relato_do_dia(request):
     hoje = date.today()
 
-    # 1️⃣ Já existe relato escolhido hoje?
-    relato_hoje = RelatoCaso.objects.filter(
-        ativo=True,
-        exibido_em=hoje
-    ).first()
-
+    # 1️⃣ Já existe relato exibido hoje?
+    relato_hoje = RelatoCaso.objects.filter(exibido_em=hoje).first()
     if relato_hoje:
-        return JsonResponse({
-            "id": relato_hoje.id,
-            "titulo": relato_hoje.titulo,
-            "subtitulo": relato_hoje.subtitulo,
-            "texto": relato_hoje.texto,
-            "data": str(hoje),
-        })
+        return JsonResponse(formatar_relato(relato_hoje))
 
-    # 2️⃣ Se não, escolhe um novo
-    relatos_disponiveis = RelatoCaso.objects.filter(
-        ativo=True
+    # 2️⃣ Relatos ativos que ainda não foram exibidos
+    disponiveis = list(
+        RelatoCaso.objects.filter(ativo=True, exibido_em__isnull=True)
     )
 
-    if not relatos_disponiveis.exists():
-        return JsonResponse(
-            {"mensagem": "Nenhum relato disponível"},
-            status=404
-        )
+    # 3️⃣ Se todos já foram exibidos, resetar ciclo
+    if not disponiveis:
+        RelatoCaso.objects.filter(ativo=True).update(exibido_em=None)
+        disponiveis = list(RelatoCaso.objects.filter(ativo=True))
 
-    relato = random.choice(list(relatos_disponiveis))
-
+    # 4️⃣ Sorteio
+    relato = random.choice(disponiveis)
     relato.exibido_em = hoje
-    relato.save()
+    relato.save(update_fields=["exibido_em"])
 
-    return JsonResponse({
+    return JsonResponse(formatar_relato(relato))
+
+
+def formatar_relato(relato):
+    return {
         "id": relato.id,
         "titulo": relato.titulo,
         "subtitulo": relato.subtitulo,
         "texto": relato.texto,
-        "data": str(hoje),
-    })
+        "fonte": relato.fonte,
+        "data": str(relato.exibido_em),
+    }

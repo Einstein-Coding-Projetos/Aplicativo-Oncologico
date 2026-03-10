@@ -10,10 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name="relatocaso",
-            name="ja_exibido",
-        ),
         migrations.AddField(
             model_name="relatocaso",
             name="exibido_em",

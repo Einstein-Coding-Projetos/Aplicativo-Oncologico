@@ -87,6 +87,13 @@ export default function TabsLayout() {
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="relato/[id]"
+        options={{
+          href: null,  
+        }}
+      />
       
 
     </Tabs>

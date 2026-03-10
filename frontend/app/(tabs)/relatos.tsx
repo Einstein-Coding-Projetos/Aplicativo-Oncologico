@@ -1,160 +1,261 @@
-import React, { useEffect, useState } from "react";
 import {
-  ScrollView,
+  View,
   Text,
   StyleSheet,
-  ActivityIndicator,
   TouchableOpacity,
-  RefreshControl,
+  ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 type Relato = {
   id: number;
   titulo: string;
   subtitulo: string;
   texto: string;
-}; // define o formato do relato que vem da API
+  fonte: string;
+  data: string;
+};
 
-export default function RelatosScreen() {
-  const [relato, setRelato] = useState<Relato | null>(null); // guarda o relato vindo da API
-  const [loading, setLoading] = useState(true); // controla se está carregando
-  const [erro, setErro] = useState<string | null>(null); // guarda uma mensagem de erro
-  const [refreshing, setRefreshing] = useState(false); // controla o estado do pull-to-refresh
+export default function Relatos() {
+  const [favoritos, setFavoritos] = useState<Relato[]>([]);
+  const [relatoDoDia, setRelatoDoDia] = useState<Relato | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [expandido, setExpandido] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    buscarRelato();
-  }, []); // busca relato quando a tela abre
+    carregarFavoritos();
+    buscarRelatoDoDia();
+  }, []);
 
-  const buscarRelato = async () => {
+  async function buscarRelatoDoDia() {
     try {
-      setErro(null);  // função para buscar dados do backend
-
       const response = await fetch(
-        "http://127.0.0.1:8000/api/relato-do-dia/"
-      ); // faz requisição HTTP para API Django
+        "http://127.0.0.1:8000/api/relato-do-dia"
+      );
 
-      if (!response.ok) {
-        throw new Error("Erro ao buscar relato");
-      } // se não tiver resposta, lança erro
-
-      const data: Relato = await response.json(); // converte o JSON em objeto e garante que ele segue o tipo Relato
-
-      setRelato(data); // salva o relato no estado
-
-    } catch (e) {
-      console.log(e);
-      setErro("Não foi possível carregar o relato"); // lança eerro se não conseguir carregar o relato
+      const data = await response.json();
+      setRelatoDoDia(data);
+    } catch (error) {
+      console.log("Erro ao buscar relato:", error);
     } finally {
       setLoading(false);
-      setRefreshing(false); // para loading e refresh
-    } 
-  };
+    }
+  }
 
-  // Estados: loading, erro e sem relato
+  async function carregarFavoritos() {
+    const dados = await AsyncStorage.getItem("favoritos");
+    if (dados) {
+      setFavoritos(JSON.parse(dados));
+    }
+  }
+
+  async function toggleFavorito(relato: Relato) {
+    let novosFavoritos;
+    const jaExiste = favoritos.find((item) => item.id === relato.id);
+
+    if (jaExiste) {
+      novosFavoritos = favoritos.filter((item) => item.id !== relato.id);
+    } else {
+      novosFavoritos = [...favoritos, relato];
+    }
+
+    setFavoritos(novosFavoritos);
+    await AsyncStorage.setItem("favoritos", JSON.stringify(novosFavoritos));
+  }
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.center}>
-        <ActivityIndicator size="large" />
+      <SafeAreaView style={styles.safe}>
+        <ActivityIndicator size="large" style={{ marginTop: 50 }} />
       </SafeAreaView>
     );
   }
 
-  if (erro) {
+  if (!relatoDoDia) {
     return (
-      <SafeAreaView style={styles.center}>
-        <Text>{erro}</Text>
-        <TouchableOpacity style={styles.botao} onPress={buscarRelato}>
-          <Text style={styles.botaoTexto}>Tentar novamente</Text>
-        </TouchableOpacity>
+      <SafeAreaView style={styles.safe}>
+        <Text>Não foi possível carregar o relato.</Text>
       </SafeAreaView>
     );
   }
 
-  if (!relato) {
-    return (
-      <SafeAreaView style={styles.center}>
-        <Text>Nenhum relato disponível</Text>
-      </SafeAreaView>
-    );
-  }
-
-  // Render principal
+  const ehFavorito = favoritos.some(
+    (item) => item.id === relatoDoDia.id
+  );
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => {
-              setRefreshing(true);
-              buscarRelato();
-            }}
-          />
-        }
-      >
-        <Text style={styles.titulo}>{relato.titulo}</Text>
+      <ScrollView contentContainerStyle={styles.container}>
+        {/* RELATO DO DIA */}
+        <TouchableOpacity
+          style={[
+            styles.widgetPrincipal,
+            expandido && styles.widgetExpandido,
+          ]}
+          activeOpacity={0.95}
+          onPress={() => setExpandido(!expandido)}
+        >
+          <View style={styles.headerRelato}>
+            <Text style={styles.titulo}>
+              {relatoDoDia.titulo}
+            </Text>
 
-        {relato.subtitulo ? (
-          <Text style={styles.subtitulo}>{relato.subtitulo}</Text>
-        ) : null}
+            <TouchableOpacity
+              onPress={() => toggleFavorito(relatoDoDia)}
+            >
+              <Ionicons
+                name={ehFavorito ? "star" : "star-outline"}
+                size={28}
+                color="#F4B400"
+              />
+            </TouchableOpacity>
+          </View>
 
-        <Text style={styles.texto}>{relato.texto}</Text>
+          <Text style={styles.subtitulo}>
+            {relatoDoDia.subtitulo}
+          </Text>
+
+          <Text style={styles.texto}>
+            {expandido
+              ? relatoDoDia.texto
+              : relatoDoDia.texto.substring(0, 180) + "..."}
+          </Text>
+
+          <Text style={styles.verMais}>
+            {expandido ? "Ver menos" : "Toque para ler completo"}
+          </Text>
+        </TouchableOpacity>
+
+        {/* FAVORITOS */}
+        <View style={styles.widgetFavoritos}>
+          <Text style={styles.tituloSecundario}>
+            ⭐ Relatos Favoritados
+          </Text>
+
+          {favoritos.length === 0 ? (
+            <Text style={styles.vazio}>
+              Você ainda não favoritou nenhum relato.
+            </Text>
+          ) : (
+            favoritos.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.itemFavorito}
+                onPress={() =>
+                  router.push({pathname: "/relato/[id]", 
+                    params : {
+                      id: item.id,
+                      titulo: item.titulo, 
+                      subtitulo: item.subtitulo, 
+                      texto: item.texto, 
+                    }, 
+                  })
+                }
+              >
+                <Text style={styles.tituloFavorito}>
+                  {item.titulo}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-// Estilos
-
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#F2F4F7",
   },
-  scroll: {
-    flex: 1,
+
+  container: {
+    padding: 20,
   },
-  scrollContent: {
-    padding: 24,
-    paddingBottom: 40,
+
+  widgetPrincipal: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 30,
+    padding: 26,
+    marginBottom: 30,
+    minHeight: 260,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+    elevation: 8,
   },
-  center: {
-    flex: 1,
-    justifyContent: "center",
+
+  widgetExpandido: {
+    minHeight: 380,
+  },
+
+  headerRelato: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    padding: 24,
   },
+
   titulo: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 8,
   },
+
   subtitulo: {
-    fontSize: 16,
-    fontStyle: "italic",
-    color: "#666",
-    marginBottom: 16,
+    marginTop: 8,
+    fontSize: 15,
+    color: "#777",
   },
+
   texto: {
+    marginTop: 18,
     fontSize: 16,
     lineHeight: 24,
+    color: "#444",
   },
-  botao: {
-    marginTop: 32,
-    backgroundColor: "#4F46E5",
+
+  verMais: {
+    marginTop: 18,
+    fontSize: 14,
+    color: "#6C63FF",
+    fontWeight: "600",
+  },
+
+  widgetFavoritos: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 30,
+    padding: 22,
+    minHeight: 220,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+
+  tituloSecundario: {
+    fontSize: 17,
+    fontWeight: "600",
+    marginBottom: 16,
+  },
+
+  vazio: {
+    color: "#888",
+  },
+
+  itemFavorito: {
     paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
+    borderBottomWidth: 1,
+    borderColor: "#EEE",
   },
-  botaoTexto: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
+
+  tituloFavorito: {
+    fontSize: 15,
   },
+
 });
