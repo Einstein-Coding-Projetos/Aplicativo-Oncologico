@@ -100,7 +100,7 @@ export default function DailyCheckinFab() {
   return (
     <>
       <Pressable
-        className={`absolute bottom-28 right-6 h-14 w-14 items-center justify-center rounded-full border shadow-lg ${
+        className={`absolute bottom-36 right-6 h-14 w-14 items-center justify-center rounded-full border shadow-lg ${
           fabCompleted ? 'border-emerald-300/60 bg-emerald-500' : 'border-cyan-300/70 bg-[#0B63F6]'
         }`}
         onPress={() => {
