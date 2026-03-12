@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppContext } from '../../context/AppContext';
 import api from '../../lib/api';
@@ -66,33 +66,56 @@ export default function ProgressScreen() {
     }
   }, []);
 
+ // 1. Defina primeiro a função de agendamentos
   const loadNextAppointment = useCallback(async () => {
     try {
       const data = await api.fetchAppointments();
-      if (data.length > 0) {
-        const sorted = [...data].sort(
-          (a: Appointment, b: Appointment) => new Date(a.date).getTime() - new Date(b.date).getTime()
-        );
-        setNextAppointment(sorted[0]);
-        await setStoredJson('home_next_appointment_cache_v1', sorted[0]);
+      
+      if (data && data.length > 0) {
+        const agora = new Date();
+        agora.setHours(0, 0, 0, 0);
+
+        const pendentes = data.filter((item: Appointment) => {
+          const dataConsulta = new Date(`${item.date}T00:00:00`);
+          return item.status !== 'concluida' && dataConsulta >= agora;
+        });
+
+        if (pendentes.length > 0) {
+          const sorted = [...pendentes].sort(
+            (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+          );
+          setNextAppointment(sorted[0]);
+        } else {
+          setNextAppointment(null);
+        }
       } else {
         setNextAppointment(null);
         await setStoredJson('home_next_appointment_cache_v1', null);
       }
-    } catch {
-      const cached = await getStoredJson<Appointment | null>('home_next_appointment_cache_v1', null);
-      setNextAppointment(cached);
-      setOfflineInfo((prev) => prev ?? 'Sem conexao com a API. Exibindo dados salvos anteriormente.');
+    } catch (error) {
+      console.error("Erro ao atualizar fila de agendamentos:", error);
+      setNextAppointment(null);
     }
-  }, []);
+  }, []); // Adicionei o fechamento correto aqui
 
+  // 2. Defina o refreshDashboard DEPOIS das funções que ele chama
   const refreshDashboard = useCallback(async () => {
     setRefreshing(true);
     setOfflineInfo(null);
-    await Promise.all([loadNextAppointment(), loadProfileProgress()]);
-    setRefreshing(false);
-  }, [loadNextAppointment, loadProfileProgress]);
+    try {
+      // Agora ele reconhece as funções acima
+      await Promise.all([
+        loadProfileProgress(),
+        loadNextAppointment()
+      ]);
+    } catch (error) {
+      console.error("Erro ao atualizar dashboard:", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadProfileProgress, loadNextAppointment]);
 
+  // 3. O useFocusEffect vem por último
   useFocusEffect(
     useCallback(() => {
       refreshDashboard();
@@ -209,24 +232,54 @@ export default function ProgressScreen() {
 
         <View className="mt-4 rounded-md border border-[#243354] bg-[#0E1A33] p-4">
           <View className="flex-row items-center justify-between">
-            <Text className="text-base font-black text-white">Proximo agendamento</Text>
+            <Text className="text-base font-black text-white">Próximo agendamento</Text>
             <Ionicons name="calendar-outline" size={18} color="#7DD3FC" />
           </View>
+
           {nextAppointment ? (
             <View className="mt-3 rounded-md border border-blue-400/40 bg-blue-500/20 p-3">
-              <Text className="text-sm font-bold text-white">{nextAppointment.profissional}</Text>
-              <Text className="mt-1 text-sm text-blue-100">{formatDate(nextAppointment.date)} as {nextAppointment.horario}</Text>
+              <View className="flex-row justify-between items-center">
+                <Text className="text-sm font-bold text-white">{nextAppointment.profissional}</Text>
+                <View className="bg-blue-400/20 px-2 py-0.5 rounded">
+                  <Text className="text-[10px] text-blue-300 font-bold uppercase">Agendado</Text>
+                </View>
+              </View>
+              
+              <Text className="mt-1 text-sm text-blue-100">
+                {formatDate(nextAppointment.date)} às {nextAppointment.horario}
+              </Text>
+
+              <Pressable 
+                className="mt-4 rounded-md bg-green-600/80 py-2 items-center active:bg-green-700"
+                onPress={async () => {
+                  try {
+                    // Chama o backend para mudar o status no Neon
+                    const sucesso = await api.completeAppointment(nextAppointment.id);
+                    if (sucesso) {
+                      // RECARREGA A FILA: Isso fará a concluída sumir e a próxima aparecer
+                      await loadNextAppointment(); 
+                    }
+                  } catch (error) {
+                    console.error("Erro ao concluir:", error);
+                  }
+                }}
+              >
+                <Text className="text-xs font-black text-white">MARCAR COMO REALIZADA</Text>
+              </Pressable>
             </View>
           ) : (
             <View className="mt-3 rounded-md border border-orange-300/40 bg-orange-500/20 p-3">
-              <Text className="text-sm text-orange-100">Nenhum evento futuro encontrado.</Text>
-              <Pressable className="mt-3 self-start rounded-md bg-[#F97316] px-4 py-2" onPress={() => router.push('/(tabs)/agendamento')}>
-                <Text className="font-semibold text-white">Agendar consulta</Text>
+              <Text className="text-sm text-orange-100 font-medium">Nenhum evento futuro agendado.</Text>
+              <Pressable 
+                className="mt-3 self-start rounded-md bg-[#F97316] px-4 py-2" 
+                onPress={() => router.push('/(tabs)/agendamento')}
+              >
+                <Text className="font-bold text-white text-xs">AGENDAR AGORA</Text>
               </Pressable>
             </View>
           )}
         </View>
-
+        
         <View className="mt-4 rounded-md border border-[#243354] bg-[#0E1A33] p-4">
           <Text className="text-base font-black text-white">Acoes rapidas</Text>
           <View className="mt-3 gap-2">
