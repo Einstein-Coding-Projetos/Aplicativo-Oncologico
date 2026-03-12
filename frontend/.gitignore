@@ -37,6 +37,10 @@ yarn-error.*
 # local env files
 .env*.local
 
+# generated uploads
+/media
+/backend/media
+
 # typescript
 *.tsbuildinfo
 

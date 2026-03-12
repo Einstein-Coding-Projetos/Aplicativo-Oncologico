@@ -5,6 +5,7 @@ from django.db.models.functions import Random
 from django.http import JsonResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -17,9 +18,8 @@ def relato_do_dia(request):
     total = RelatoCaso.objects.count()
 
     if total == 0:
-        return JsonResponse({"mensagem": "Nenhum relato disponível"}, status=404)
+        return JsonResponse({"mensagem": "Nenhum relato disponivel"}, status=404)
 
-    # sempre retorna o mesmo relato durante o dia
     random.seed(hoje.toordinal())
     idx = random.randrange(total)
     relato = RelatoCaso.objects.all().order_by("id")[idx]
@@ -32,7 +32,7 @@ def formatar_relato(relato, hoje):
         "id": relato.id,
         "titulo": relato.titulo,
         "subtitulo": relato.subtitulo,
-        "conteudo": relato.conteudo,
+        "conteudo": relato.texto,
         "fonte": getattr(relato, "fonte", None),
         "data": str(hoje),
     }
@@ -42,13 +42,13 @@ def relato_aleatorio(request):
     relato = RelatoCaso.objects.order_by(Random()).first()
 
     if not relato:
-        return JsonResponse({"mensagem": "Nenhum relato disponível"}, status=404)
+        return JsonResponse({"mensagem": "Nenhum relato disponivel"}, status=404)
 
     return JsonResponse({
         "id": relato.id,
         "titulo": relato.titulo,
         "subtitulo": relato.subtitulo,
-        "conteudo": relato.conteudo,
+        "conteudo": relato.texto,
     })
 
 
@@ -94,7 +94,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
         if not profissional:
             return Response(
-                {"erro": 'O parâmetro "profissional" é obrigatório.'},
+                {"erro": 'O parametro "profissional" e obrigatorio.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -124,6 +124,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 class UserProfileViewSet(viewsets.ModelViewSet):
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get_queryset(self):
         return UserProfile.objects.filter(user=self.request.user)

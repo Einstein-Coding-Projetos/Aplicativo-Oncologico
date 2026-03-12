@@ -34,6 +34,13 @@ function buildPath(points: { x: number; y: number }[]): string {
   return d;
 }
 
+function localIso(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export default function DiarioScreen() {
   const { entries } = useAppContext();
   const [viewMode, setViewMode] = useState<'timeline' | 'calendar'>('timeline');
@@ -66,6 +73,23 @@ export default function DiarioScreen() {
       acc[entry.date] = entry.mood;
       return acc;
     }, {} as Record<string, number>);
+  }, [entries]);
+
+  const averageMood = useMemo(() => {
+    if (!entries.length) return null;
+    const total = entries.reduce((acc, item) => acc + item.mood, 0);
+    return total / entries.length;
+  }, [entries]);
+
+  const currentStreak = useMemo(() => {
+    const daysSet = new Set(entries.map((entry) => entry.date));
+    let streak = 0;
+    const cursor = new Date();
+    while (daysSet.has(localIso(cursor))) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return streak;
   }, [entries]);
 
   useEffect(() => {
@@ -117,6 +141,27 @@ export default function DiarioScreen() {
     <SafeAreaView className="flex-1 bg-[#070F21]">
       <View className="px-5 pb-3 pt-3">
         <View className="overflow-hidden rounded-md border border-[#2A3C60] bg-[#0E1A33] p-4">
+          <View className="mb-3 rounded-md border border-[#324669] bg-white/10 p-3">
+            <Text className="text-base font-bold text-white">Diario emocional</Text>
+            <Text className="mt-1 text-xs text-slate-300">
+              Registre como voce esta hoje. Cada entrada ajuda a acompanhar sua evolucao durante o tratamento.
+            </Text>
+            <View className="mt-3 flex-row gap-2">
+              <View className="flex-1 rounded-md border border-cyan-300/40 bg-cyan-500/20 p-2">
+                <Text className="text-xs uppercase tracking-wide text-cyan-100">Registros</Text>
+                <Text className="mt-1 text-lg font-black text-white">{entries.length}</Text>
+              </View>
+              <View className="flex-1 rounded-md border border-orange-300/40 bg-orange-500/20 p-2">
+                <Text className="text-xs uppercase tracking-wide text-orange-100">Sequencia</Text>
+                <Text className="mt-1 text-lg font-black text-white">{currentStreak} dia(s)</Text>
+              </View>
+              <View className="flex-1 rounded-md border border-emerald-300/40 bg-emerald-500/20 p-2">
+                <Text className="text-xs uppercase tracking-wide text-emerald-100">Humor medio</Text>
+                <Text className="mt-1 text-lg font-black text-white">{averageMood ? averageMood.toFixed(1) : '--'}</Text>
+              </View>
+            </View>
+          </View>
+
           {showWelcome ? (
             <View className="mb-3 rounded-md border border-[#324669] bg-white/10 p-3">
               <Text className="text-sm font-semibold text-white">Bem-vindo(a) de volta.</Text>

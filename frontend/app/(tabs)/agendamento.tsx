@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import api from '../../lib/api';
+import { getStoredJson, setStoredJson } from '../../lib/storage';
 
 type Slot = { date: string; horario: string };
 
@@ -11,14 +12,13 @@ type Service = {
   name: string;
   professional: string;
   color: string;
-  bg: string;
 };
 
 const services: Service[] = [
-  { id: 'psico-onco', name: 'Psico-oncologia', professional: 'Dra. Helena Martins', color: '#0B63F6', bg: '#DBEAFE' },
-  { id: 'terapia-familiar', name: 'Terapia familiar', professional: 'Dr. Ricardo Alves', color: '#0284C7', bg: '#E0F2FE' },
-  { id: 'tcc', name: 'Terapia cognitiva', professional: 'Dra. Patricia Lima', color: '#EA580C', bg: '#FFEDD5' },
-  { id: 'cuidados', name: 'Cuidados paliativos', professional: 'Dr. Lucas Ferreira', color: '#FB923C', bg: '#FFEDD5' },
+  { id: 'psico-onco', name: 'Psico-oncologia', professional: 'Dra. Helena Martins', color: '#0B63F6' },
+  { id: 'terapia-familiar', name: 'Terapia familiar', professional: 'Dr. Ricardo Alves', color: '#0284C7' },
+  { id: 'tcc', name: 'Terapia cognitiva', professional: 'Dra. Patricia Lima', color: '#EA580C' },
+  { id: 'cuidados', name: 'Cuidados paliativos', professional: 'Dr. Lucas Ferreira', color: '#FB923C' },
 ];
 
 const availableTimes = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
@@ -45,17 +45,33 @@ export default function AgendamentoScreen() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [occupied, setOccupied] = useState<Slot[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [slotError, setSlotError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const loadOccupied = async () => {
-      if (!selectedService) return;
+  const loadOccupied = useCallback(async (mode: 'initial' | 'refresh' = 'initial') => {
+    if (!selectedService) return;
+    if (mode === 'initial') setIsLoadingSlots(true);
+    if (mode === 'refresh') setRefreshing(true);
+    try {
+      setSlotError(null);
       const data = await api.fetchHorariosOcupados(selectedService.professional);
       setOccupied(data);
-    };
-
-    loadOccupied();
+      await setStoredJson(`occupied_slots_${selectedService.professional}`, data);
+    } catch {
+      const cached = await getStoredJson<Slot[]>(`occupied_slots_${selectedService.professional}`, []);
+      setOccupied(cached);
+      setSlotError('Sem conexao para atualizar horarios. Exibindo a ultima disponibilidade salva.');
+    } finally {
+      setIsLoadingSlots(false);
+      setRefreshing(false);
+    }
   }, [selectedService]);
+
+  useEffect(() => {
+    loadOccupied();
+  }, [loadOccupied]);
 
   const isOccupied = (time: string) =>
     occupied.some((slot) => slot.date === selectedDate && slot.horario.startsWith(time));
@@ -74,8 +90,7 @@ export default function AgendamentoScreen() {
         horario: selectedTime,
       });
       setIsConfirmed(true);
-      const data = await api.fetchHorariosOcupados(selectedService.professional);
-      setOccupied(data);
+      await loadOccupied('refresh');
     } catch (error: any) {
       Alert.alert('Falha ao confirmar', error?.message ?? 'Nao foi possivel concluir o agendamento.');
     } finally {
@@ -85,7 +100,10 @@ export default function AgendamentoScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#070F21]">
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 140 }}>
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingBottom: 140 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadOccupied('refresh')} tintColor="#7DD3FC" />}
+      >
         <View className="relative overflow-hidden rounded-md border border-[#2A3C60] bg-[#0E1A33] p-4">
           <View className="absolute -left-8 -top-8 h-24 w-24 rounded-full bg-blue-500/30" />
           <View className="absolute -right-10 -bottom-10 h-28 w-28 rounded-full bg-orange-500/30" />
@@ -147,6 +165,17 @@ export default function AgendamentoScreen() {
 
         <View className="mt-4 rounded-md border border-[#324669] bg-white/10 p-4">
           <Text className="text-sm font-semibold text-cyan-100">3. Horarios disponiveis</Text>
+          {slotError ? (
+            <View className="mt-3 rounded-md border border-amber-300/40 bg-amber-500/20 p-3">
+              <Text className="text-xs text-amber-100">{slotError}</Text>
+            </View>
+          ) : null}
+          {isLoadingSlots ? (
+            <View className="mt-3 flex-row items-center gap-2 rounded-md border border-[#324669] bg-[#0F1F3D] p-3">
+              <ActivityIndicator color="#7DD3FC" />
+              <Text className="text-sm text-slate-200">Buscando horarios disponiveis...</Text>
+            </View>
+          ) : null}
           <View className="mt-3 flex-row flex-wrap gap-2">
             {availableTimes.map((time) => {
               const blocked = isOccupied(time);
@@ -196,7 +225,7 @@ export default function AgendamentoScreen() {
           {isConfirmed ? (
             <View className="mt-3 flex-row items-center gap-2 rounded-md border border-emerald-300/40 bg-emerald-500/20 p-3">
               <Ionicons name="checkmark-circle" size={18} color="#10B981" />
-              <Text className="text-sm text-emerald-100">Agendamento confirmado. Lembrete salvo.</Text>
+              <Text className="text-sm text-emerald-100">Agendamento confirmado. Horarios atualizados.</Text>
             </View>
           ) : null}
         </View>

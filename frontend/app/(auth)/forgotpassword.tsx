@@ -16,8 +16,7 @@ import api from '../../lib/api';
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [uid, setUid] = useState('');
-  const [token, setToken] = useState('');
+  const [feedback, setFeedback] = useState<string | null>(null);
 
   const handleRequestReset = async () => {
     if (!email.trim()) {
@@ -28,13 +27,17 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     try {
       const response = await api.forgotPassword(email.trim());
-      Alert.alert('Recuperacao iniciada', response.mensagem);
+      setFeedback(response.mensagem);
 
-      // Dev/testing helper when backend exposes token in DEBUG.
       if (response.uid && response.token) {
-        setUid(response.uid);
-        setToken(response.token);
+        router.push({
+          pathname: '/(auth)/resetpassword',
+          params: { uid: response.uid, token: response.token, email: email.trim() },
+        } as any);
+        return;
       }
+
+      Alert.alert('Recuperacao iniciada', response.mensagem);
     } catch (e: any) {
       Alert.alert('Erro', e?.message ?? 'Nao foi possivel iniciar a recuperacao de senha.');
     } finally {
@@ -48,11 +51,14 @@ export default function ForgotPasswordScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <Text style={styles.title}>Recuperar senha</Text>
-      <Text style={styles.subtitle}>Informe seu email para gerar o token de redefinicao.</Text>
+      <Text style={styles.subtitle}>
+        Informe seu email para iniciar a redefinicao. Em ambiente local, o app continua direto para a tela de nova senha.
+      </Text>
 
       <TextInput
         style={styles.input}
         placeholder="Email"
+        placeholderTextColor="#9FB2D8"
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
@@ -60,22 +66,13 @@ export default function ForgotPasswordScreen() {
       />
 
       <TouchableOpacity style={styles.button} onPress={handleRequestReset} disabled={loading}>
-        {loading
-          ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.buttonText}>Enviar instrucoes</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Continuar</Text>}
       </TouchableOpacity>
 
-      {uid && token ? (
-        <View style={styles.devBox}>
-          <Text style={styles.devTitle}>Token de teste (DEBUG)</Text>
-          <Text style={styles.devText}>uid: {uid}</Text>
-          <Text style={styles.devText}>token: {token}</Text>
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => router.push({ pathname: '/(auth)/resetpassword' as any, params: { uid, token } } as any)}
-          >
-            <Text style={styles.secondaryButtonText}>Continuar redefinicao</Text>
-          </TouchableOpacity>
+      {feedback ? (
+        <View style={styles.infoBox}>
+          <Text style={styles.infoTitle}>Pedido enviado</Text>
+          <Text style={styles.infoText}>{feedback}</Text>
         </View>
       ) : null}
 
@@ -91,32 +88,33 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 28,
-    backgroundColor: '#fff',
+    backgroundColor: '#070F21',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#4F46E5',
+    color: '#EAF4FF',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
-    color: '#6b7280',
+    color: '#A9C4E8',
     textAlign: 'center',
     marginBottom: 26,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: '#2E4D79',
     borderRadius: 10,
     padding: 14,
     fontSize: 16,
     marginBottom: 16,
-    backgroundColor: '#f9fafb',
+    color: '#F0F7FF',
+    backgroundColor: '#10213F',
   },
   button: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#0B63F6',
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',
@@ -128,38 +126,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   link: {
-    color: '#4F46E5',
+    color: '#7DD3FC',
     textAlign: 'center',
     fontSize: 14,
     marginTop: 8,
   },
-  devBox: {
+  infoBox: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 10,
-    padding: 12,
-    backgroundColor: '#f9fafb',
+    borderColor: '#2E4D79',
+    borderRadius: 14,
+    padding: 14,
+    backgroundColor: '#10213F',
     marginBottom: 14,
   },
-  devTitle: {
+  infoTitle: {
     fontWeight: '700',
-    color: '#111827',
+    color: '#EAF4FF',
     marginBottom: 6,
   },
-  devText: {
-    color: '#374151',
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  secondaryButton: {
-    marginTop: 8,
-    borderRadius: 8,
-    backgroundColor: '#111827',
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+  infoText: {
+    color: '#B9D6FF',
+    fontSize: 13,
   },
 });

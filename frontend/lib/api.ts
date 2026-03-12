@@ -5,6 +5,37 @@ const ACCESS_KEY = 'jwt_access';
 const REFRESH_KEY = 'jwt_refresh';
 const memoryStore = new Map<string, string>();
 
+export type UserProfile = {
+  id: number;
+  username: string;
+  email: string;
+  user_type: string;
+  bio: string | null;
+  profile_photo_url: string | null;
+  treatment_start_date: string | null;
+  treatment_duration_days: number | null;
+  current_day: number;
+  treatment_progress_percent: number;
+  activity_streak: number;
+  today_activity_completed: boolean;
+  created_at: string;
+};
+
+export type AccountMe = {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  profile: UserProfile | null;
+};
+
+type UploadableAsset = {
+  uri: string;
+  name?: string;
+  type?: string;
+};
+
 function getBrowserStorage(): Storage | null {
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -54,8 +85,6 @@ async function storageDelete(key: string): Promise<void> {
   }
 }
 
-// ─── Token storage ───────────────────────────────────────────────────────────
-
 async function getAccessToken(): Promise<string | null> {
   return storageGet(ACCESS_KEY);
 }
@@ -70,7 +99,9 @@ async function clearTokens(): Promise<void> {
   await storageDelete(REFRESH_KEY);
 }
 
-// ─── Token refresh ───────────────────────────────────────────────────────────
+function isFormDataBody(body: BodyInit | null | undefined): body is FormData {
+  return typeof FormData !== 'undefined' && body instanceof FormData;
+}
 
 async function refreshAccessToken(): Promise<string | null> {
   const refresh = await storageGet(REFRESH_KEY);
@@ -96,21 +127,21 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
-// ─── Authenticated fetch ──────────────────────────────────────────────────────
-// Attaches Bearer token; on 401 tries one refresh then retries once.
-
 async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
   let token = await getAccessToken();
 
-  const makeRequest = (t: string | null) =>
-    fetch(url, {
+  const makeRequest = (t: string | null) => {
+    const body = options.body;
+    const isMultipart = isFormDataBody(body);
+    return fetch(url, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
         ...(t ? { Authorization: `Bearer ${t}` } : {}),
         ...(options.headers ?? {}),
       },
     });
+  };
 
   let res = await makeRequest(token);
 
@@ -124,12 +155,7 @@ async function authFetch(url: string, options: RequestInit = {}): Promise<Respon
   return res;
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────────
-
 const api = {
-
-  // Auth -----------------------------------------------------------------------
-
   async login(username: string, password: string): Promise<void> {
     const res = await fetch(endpoints.token, {
       method: 'POST',
@@ -137,7 +163,7 @@ const api = {
       body: JSON.stringify({ username, password }),
     });
 
-    if (!res.ok) throw new Error('Credenciais inválidas');
+    if (!res.ok) throw new Error('Credenciais invalidas');
 
     const { access, refresh } = await res.json();
     await saveTokens(access, refresh);
@@ -193,8 +219,6 @@ const api = {
     }
   },
 
-  // Appointments ---------------------------------------------------------------
-
   async fetchAppointments() {
     const res = await authFetch(endpoints.appointmentPending);
     if (!res.ok) throw new Error(`Erro ao buscar consultas: ${res.status}`);
@@ -239,7 +263,7 @@ const api = {
 
   async fetchConcluidas() {
     const res = await authFetch(endpoints.appointmentCompleted);
-    if (!res.ok) throw new Error(`Erro ao buscar concluídas: ${res.status}`);
+    if (!res.ok) throw new Error(`Erro ao buscar concluidas: ${res.status}`);
     const data = await res.json();
     return data.map((item: any) => ({
       id: item.id.toString(),
@@ -261,22 +285,95 @@ const api = {
     return res.ok;
   },
 
-  // User profile ---------------------------------------------------------------
-
-  async fetchUserProfile() {
+  async fetchUserProfile(): Promise<UserProfile> {
     const res = await authFetch(endpoints.userProfile);
     if (!res.ok) throw new Error(`Erro ao buscar perfil: ${res.status}`);
     return res.json();
   },
 
-  // Relatos --------------------------------------------------------------------
+  async fetchAccountMe(): Promise<AccountMe> {
+    const res = await authFetch(endpoints.me);
+    if (!res.ok) throw new Error(`Erro ao buscar conta: ${res.status}`);
+    return res.json();
+  },
+
+  async updateAccountMe(payload: Partial<Pick<AccountMe, 'email' | 'first_name' | 'last_name'>>) {
+    const res = await authFetch(endpoints.me, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.erro ?? 'Nao foi possivel atualizar sua conta.');
+    return data as AccountMe;
+  },
+
+  async updateUserProfile(
+    id: number | string,
+    payload:
+      | Partial<Pick<UserProfile, 'bio' | 'treatment_start_date' | 'treatment_duration_days' | 'user_type'>>
+      | FormData
+  ) {
+    const res = await authFetch(endpoints.userProfileById(id), {
+      method: 'PATCH',
+      body: payload instanceof FormData ? payload : JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.erro ?? 'Nao foi possivel atualizar o perfil.');
+    return data as UserProfile;
+  },
+
+  async uploadProfilePhoto(id: number | string, asset: UploadableAsset) {
+    const form = new FormData();
+    form.append('profile_photo', {
+      uri: asset.uri,
+      name: asset.name ?? 'profile-photo.jpg',
+      type: asset.type ?? 'image/jpeg',
+    } as any);
+
+    return this.updateUserProfile(id, form);
+  },
+
+  async removeProfilePhoto(id: number | string) {
+    return this.updateUserProfile(id, { remove_profile_photo: true } as any);
+  },
+
+  async completeTreatmentOnboarding(payload: { treatmentEndDate: string; bio?: string }) {
+    const profile = await this.fetchUserProfile();
+    const today = new Date();
+    const endDate = new Date(`${payload.treatmentEndDate}T00:00:00`);
+
+    if (Number.isNaN(endDate.getTime())) {
+      throw new Error('Data final invalida. Use o formato AAAA-MM-DD.');
+    }
+
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const startDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    const diffDays = Math.floor((endDateOnly.getTime() - startDateOnly.getTime()) / msPerDay) + 1;
+
+    if (diffDays < 1) {
+      throw new Error('A data final deve ser hoje ou uma data futura.');
+    }
+
+    const treatmentStartDate = [
+      startDateOnly.getFullYear(),
+      String(startDateOnly.getMonth() + 1).padStart(2, '0'),
+      String(startDateOnly.getDate()).padStart(2, '0'),
+    ].join('-');
+
+    return this.updateUserProfile(profile.id, {
+      treatment_start_date: treatmentStartDate,
+      treatment_duration_days: diffDays,
+      bio: payload.bio?.trim() ? payload.bio.trim() : profile.bio,
+    });
+  },
 
   async fetchRelatoDoDia() {
     const res = await authFetch(endpoints.relatoDoDia);
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       if (res.status === 404) {
-        throw new Error(data.mensagem ?? 'Nenhum relato disponível');
+        throw new Error(data.mensagem ?? 'Nenhum relato disponivel');
       }
       throw new Error(data.erro ?? 'Erro ao buscar relato');
     }

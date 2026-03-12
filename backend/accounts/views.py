@@ -128,3 +128,26 @@ class MeView(APIView):
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+    def patch(self, request):
+        user = request.user
+        email = request.data.get('email')
+        first_name = request.data.get('first_name')
+        last_name = request.data.get('last_name')
+
+        if email is not None:
+            normalized_email = email.strip()
+            if normalized_email and User.objects.filter(email__iexact=normalized_email).exclude(pk=user.pk).exists():
+                return Response({'erro': 'Este email ja esta em uso.'}, status=status.HTTP_400_BAD_REQUEST)
+            user.email = normalized_email
+
+        if first_name is not None:
+            user.first_name = first_name.strip()
+
+        if last_name is not None:
+            user.last_name = last_name.strip()
+
+        user.save(update_fields=['email', 'first_name', 'last_name'])
+
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)

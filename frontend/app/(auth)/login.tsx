@@ -26,7 +26,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await api.login(username.trim(), password);
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch {
       Alert.alert('Erro', 'Usuario ou senha incorretos.');
     } finally {
@@ -45,6 +45,7 @@ export default function LoginScreen() {
       <TextInput
         style={styles.input}
         placeholder="Usuario"
+        placeholderTextColor="#9FB2D8"
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
@@ -54,15 +55,14 @@ export default function LoginScreen() {
       <TextInput
         style={styles.input}
         placeholder="Senha"
+        placeholderTextColor="#9FB2D8"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
       />
 
       <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-        {loading
-          ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.buttonText}>Entrar</Text>}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Entrar</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
@@ -81,32 +81,33 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 28,
-    backgroundColor: '#fff',
+    backgroundColor: '#070F21',
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#4F46E5',
+    color: '#EAF4FF',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6b7280',
+    color: '#A9C4E8',
     textAlign: 'center',
     marginBottom: 36,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: '#2E4D79',
     borderRadius: 10,
     padding: 14,
     fontSize: 16,
     marginBottom: 16,
-    backgroundColor: '#f9fafb',
+    color: '#F0F7FF',
+    backgroundColor: '#10213F',
   },
   button: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#0B63F6',
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   link: {
-    color: '#4F46E5',
+    color: '#7DD3FC',
     textAlign: 'center',
     fontSize: 14,
     marginTop: 8,

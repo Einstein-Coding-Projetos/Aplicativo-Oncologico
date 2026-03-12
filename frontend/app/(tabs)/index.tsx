@@ -2,10 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppContext } from '../../context/AppContext';
 import api from '../../lib/api';
+import { getStoredJson, setStoredJson } from '../../lib/storage';
 
 type Appointment = {
   id: string;
@@ -22,8 +23,48 @@ function formatDate(value: string): string {
 }
 
 export default function ProgressScreen() {
-  const { entries, progress, dailyTaskCompleted } = useAppContext();
+  const { entries, dailyTaskCompleted } = useAppContext();
   const [nextAppointment, setNextAppointment] = useState<Appointment | null>(null);
+  const [treatmentProgress, setTreatmentProgress] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [offlineInfo, setOfflineInfo] = useState<string | null>(null);
+  const [treatmentSummary, setTreatmentSummary] = useState<{ currentDay: number; endDateLabel: string | null }>({
+    currentDay: 0,
+    endDateLabel: null,
+  });
+
+  const loadProfileProgress = useCallback(async () => {
+    try {
+      const profile = await api.fetchUserProfile();
+      const progressPercent = Math.max(0, Math.min(100, Number(profile.treatment_progress_percent || 0)));
+      const summary =
+        profile.treatment_start_date && profile.treatment_duration_days
+          ? {
+              currentDay: Number(profile.current_day || 0),
+              endDateLabel: new Date(
+                new Date(`${profile.treatment_start_date}T00:00:00`).setDate(
+                  new Date(`${profile.treatment_start_date}T00:00:00`).getDate() + profile.treatment_duration_days - 1
+                )
+              ).toLocaleDateString('pt-BR'),
+            }
+          : { currentDay: 0, endDateLabel: null };
+
+      setTreatmentProgress(progressPercent / 100);
+      setTreatmentSummary(summary);
+      await setStoredJson('home_progress_cache_v1', {
+        treatmentProgress: progressPercent / 100,
+        treatmentSummary: summary,
+      });
+    } catch {
+      const cached = await getStoredJson('home_progress_cache_v1', {
+        treatmentProgress: 0,
+        treatmentSummary: { currentDay: 0, endDateLabel: null },
+      });
+      setTreatmentProgress(cached.treatmentProgress);
+      setTreatmentSummary(cached.treatmentSummary);
+      setOfflineInfo((prev) => prev ?? 'Sem conexao com a API. Exibindo progresso salvo anteriormente.');
+    }
+  }, []);
 
   const loadNextAppointment = useCallback(async () => {
     try {
@@ -33,18 +74,29 @@ export default function ProgressScreen() {
           (a: Appointment, b: Appointment) => new Date(a.date).getTime() - new Date(b.date).getTime()
         );
         setNextAppointment(sorted[0]);
+        await setStoredJson('home_next_appointment_cache_v1', sorted[0]);
       } else {
         setNextAppointment(null);
+        await setStoredJson('home_next_appointment_cache_v1', null);
       }
     } catch {
-      setNextAppointment(null);
+      const cached = await getStoredJson<Appointment | null>('home_next_appointment_cache_v1', null);
+      setNextAppointment(cached);
+      setOfflineInfo((prev) => prev ?? 'Sem conexao com a API. Exibindo dados salvos anteriormente.');
     }
   }, []);
 
+  const refreshDashboard = useCallback(async () => {
+    setRefreshing(true);
+    setOfflineInfo(null);
+    await Promise.all([loadNextAppointment(), loadProfileProgress()]);
+    setRefreshing(false);
+  }, [loadNextAppointment, loadProfileProgress]);
+
   useFocusEffect(
     useCallback(() => {
-      loadNextAppointment();
-    }, [loadNextAppointment])
+      refreshDashboard();
+    }, [refreshDashboard])
   );
 
   const thisWeekCount = useMemo(() => {
@@ -86,7 +138,11 @@ export default function ProgressScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#070F21]">
-      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={{ padding: 18, paddingBottom: 140 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshDashboard} tintColor="#7DD3FC" />}
+      >
         <LinearGradient colors={['#1B2A49', '#243A61', '#2A446D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 12, padding: 16 }}>
           <View className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/20" />
           <View className="absolute -left-10 -bottom-10 h-28 w-28 rounded-full bg-indigo-200/20" />
@@ -96,13 +152,24 @@ export default function ProgressScreen() {
           <View className="mt-4 rounded-md bg-white/10 p-3">
             <View className="flex-row items-center justify-between">
               <Text className="text-xs font-bold uppercase tracking-wide text-blue-50">Jornada do tratamento</Text>
-              <Text className="text-sm font-black text-white">{Math.round(progress * 100)}%</Text>
+              <Text className="text-sm font-black text-white">{Math.round(treatmentProgress * 100)}%</Text>
             </View>
             <View className="mt-2 h-3 overflow-hidden rounded-sm bg-white/20">
-              <LinearGradient colors={['#4D86D9', '#3970C1', '#2C5DA5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: '100%', width: `${Math.max(4, progress * 100)}%` }} />
+              <LinearGradient colors={['#4D86D9', '#3970C1', '#2C5DA5']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: '100%', width: `${Math.max(4, treatmentProgress * 100)}%` }} />
             </View>
+            <Text className="mt-2 text-xs text-blue-100">
+              {treatmentSummary.endDateLabel
+                ? `Dia ${treatmentSummary.currentDay} da jornada. Previsao de termino: ${treatmentSummary.endDateLabel}.`
+                : 'Defina o termino do tratamento na recepcao inicial para personalizar esta barra.'}
+            </Text>
           </View>
         </LinearGradient>
+
+        {offlineInfo ? (
+          <View className="mt-4 rounded-md border border-amber-300/40 bg-amber-500/20 p-3">
+            <Text className="text-xs text-amber-100">{offlineInfo}</Text>
+          </View>
+        ) : null}
 
         <View className="mt-4 flex-row gap-2">
           <LinearGradient colors={['#2D5CA1', '#3E73B8']} style={{ flex: 1, borderRadius: 10, padding: 12 }}>

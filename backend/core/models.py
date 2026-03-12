@@ -55,6 +55,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='patient')
     bio = models.TextField(blank=True, null=True)
+    profile_photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
 
     # Tratamento oncologico
     treatment_start_date = models.DateField(null=True, blank=True, help_text="Data de inicio do tratamento")

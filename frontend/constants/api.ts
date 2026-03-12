@@ -19,6 +19,7 @@ export const endpoints = {
 
   // User profile
   userProfile: `${BASE_URL}/api/user-profile/me/`,
+  userProfileById: (id: number | string) => `${BASE_URL}/api/user-profile/${id}/`,
 
   // Relatos
   relatoDoDia:    `${BASE_URL}/api/relato-do-dia/`,
