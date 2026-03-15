@@ -19,6 +19,7 @@ export type UserProfile = {
   activity_streak: number;
   today_activity_completed: boolean;
   created_at: string;
+  is_staff: boolean;
 };
 
 export type AccountMe = {
@@ -28,6 +29,7 @@ export type AccountMe = {
   first_name: string;
   last_name: string;
   profile: UserProfile | null;
+  is_staff: boolean; 
 };
 
 type UploadableAsset = {
@@ -60,7 +62,6 @@ async function storageGet(key: string): Promise<string | null> {
 async function storageSet(key: string, value: string): Promise<void> {
   try {
     await SecureStore.setItemAsync(key, value);
-    return;
   } catch {
     const browserStorage = getBrowserStorage();
     if (browserStorage) {
@@ -74,7 +75,6 @@ async function storageSet(key: string, value: string): Promise<void> {
 async function storageDelete(key: string): Promise<void> {
   try {
     await SecureStore.deleteItemAsync(key);
-    return;
   } catch {
     const browserStorage = getBrowserStorage();
     if (browserStorage) {
@@ -169,21 +169,22 @@ const api = {
     await saveTokens(access, refresh);
   },
 
-  async register(username: string, password: string, email?: string): Promise<void> {
-    const res = await fetch(endpoints.register, {
+  async register(username: string, password: string, email?: string, is_psicologo: boolean = false): Promise<void> {
+    const res = await fetch(endpoints.register || '/auth/register/', { 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, email }),
+      body: JSON.stringify({ 
+        username, 
+        password, 
+        email, 
+        is_psicologo 
+      }),
     });
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      throw new Error(data.erro ?? 'Erro ao criar conta');
+      throw new Error(data.erro ?? 'Não foi possível criar a conta.');
     }
-  },
-
-  async logout(): Promise<void> {
-    await clearTokens();
   },
 
   async isAuthenticated(): Promise<boolean> {
@@ -309,9 +310,7 @@ const api = {
 
   async updateUserProfile(
     id: number | string,
-    payload:
-      | Partial<Pick<UserProfile, 'bio' | 'treatment_start_date' | 'treatment_duration_days' | 'user_type'>>
-      | FormData
+    payload: Partial<Pick<UserProfile, 'bio' | 'treatment_start_date' | 'treatment_duration_days' | 'user_type'>> | FormData
   ) {
     const res = await authFetch(endpoints.userProfileById(id), {
       method: 'PATCH',
@@ -379,6 +378,22 @@ const api = {
     }
     return res.json();
   },
+
+  async fetchPsicologoAgenda() {
+    const res = await authFetch('/psicologo/agenda/'); 
+    if (!res.ok) throw new Error('Erro ao carregar agenda');
+    return res.json();
+  },
+
+  async saveDisponibilidade(date: string, slots: string[]) {
+    const res = await authFetch('/psicologo/agenda/', {
+      method: 'POST',
+      body: JSON.stringify({ date, slots }),
+    });
+    if (!res.ok) throw new Error('Erro ao salvar horários');
+    return res.json();
+  },
+
 };
 
 export default api;

@@ -55,6 +55,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     profile_photo = serializers.ImageField(write_only=True, required=False, allow_null=True)
     profile_photo_url = serializers.SerializerMethodField(read_only=True)
     remove_profile_photo = serializers.BooleanField(write_only=True, required=False, default=False)
+    is_staff = serializers.BooleanField(source='user.is_staff', read_only=True)
 
     def get_profile_photo_url(self, obj):
         if not obj.profile_photo:
@@ -91,6 +92,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'user_type', 'bio', 'profile_photo', 'profile_photo_url',
             'remove_profile_photo', 'treatment_start_date', 'treatment_duration_days',
             'current_day', 'treatment_progress_percent', 'activity_streak', 'today_activity_completed',
-            'created_at',
+            'created_at', 'is_staff'
         ]
         read_only_fields = ['id', 'created_at']

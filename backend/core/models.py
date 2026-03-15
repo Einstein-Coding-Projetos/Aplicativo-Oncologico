@@ -2,7 +2,29 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
 from django.db.models import Q
+from django.db import models
+from django.contrib.auth.models import User
 
+# ADICIONE ESTA LISTA AQUI:
+USER_TYPE_CHOICES = [
+    ('patient', 'Paciente'),
+    ('psychologist', 'Psicólogo'),
+]
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='core_profile'
+    )
+    # Agora o choices=USER_TYPE_CHOICES vai funcionar:
+    user_type = models.CharField(
+        max_length=20, 
+        choices=USER_TYPE_CHOICES, 
+        default='patient'
+    )
+    bio = models.TextField(blank=True, null=True)
+    profile_photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
 
 class Appointment(models.Model):
     STATUS_SCHEDULED = "agendado"
@@ -52,7 +74,12 @@ class UserProfile(models.Model):
         ('psychologist', 'Psicologo'),
     )
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+class UserProfile(models.Model):
+    user = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='core_profile' # Nome diferente para não bater com o de cima
+    )
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='patient')
     bio = models.TextField(blank=True, null=True)
     profile_photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)

@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  View,
+  Switch,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -16,21 +18,34 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isPsicologo, setIsPsicologo] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
     if (!username.trim() || !password) {
-      Alert.alert('Campos obrigatorios', 'Preencha usuario e senha.');
+      Alert.alert('Campos obrigatórios', 'Preencha usuário e senha.');
       return;
     }
 
     setLoading(true);
     try {
-      await api.register(username.trim(), password, email.trim() || undefined);
+      // Enviando os 4 parâmetros para a API
+      await api.register(
+        username.trim(), 
+        password, 
+        email.trim() || undefined, 
+        isPsicologo 
+      );
+      
       await api.login(username.trim(), password);
-      router.replace('/');
+      
+      if (isPsicologo) {
+        router.replace('/(psicologo)');
+      } else {
+        router.replace('/');
+      }
     } catch (e: any) {
-      Alert.alert('Erro', e.message ?? 'Nao foi possivel criar a conta.');
+      Alert.alert('Erro', e.message ?? 'Não foi possível criar a conta.');
     } finally {
       setLoading(false);
     }
@@ -46,12 +61,11 @@ export default function RegisterScreen() {
 
       <TextInput
         style={styles.input}
-        placeholder="Usuario"
+        placeholder="Usuário"
         placeholderTextColor="#9FB2D8"
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
-        autoCorrect={false}
       />
 
       <TextInput
@@ -60,7 +74,6 @@ export default function RegisterScreen() {
         placeholderTextColor="#9FB2D8"
         value={email}
         onChangeText={setEmail}
-        autoCapitalize="none"
         keyboardType="email-address"
       />
 
@@ -73,12 +86,23 @@ export default function RegisterScreen() {
         secureTextEntry
       />
 
+      {/* APENAS UM CONTAINER DE SWITCH AQUI */}
+      <View style={styles.switchContainer}>
+        <Text style={styles.switchLabel}>Sou Psicólogo(a)</Text>
+        <Switch
+          value={isPsicologo}
+          onValueChange={(value) => setIsPsicologo(value)}
+          trackColor={{ false: '#2E4D79', true: '#0B63F6' }}
+          thumbColor={isPsicologo ? '#fff' : '#A9C4E8'}
+        />
+      </View>
+
       <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Criar conta</Text>}
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.back()}>
-        <Text style={styles.link}>Ja tem conta? Entrar</Text>
+        <Text style={styles.link}>Já tem conta? Entrar</Text>
       </TouchableOpacity>
     </KeyboardAvoidingView>
   );
@@ -113,6 +137,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: '#F0F7FF',
     backgroundColor: '#10213F',
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#10213F',
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#2E4D79',
+    marginBottom: 16,
+  },
+  switchLabel: {
+    color: '#F0F7FF',
+    fontSize: 16,
   },
   button: {
     backgroundColor: '#0B63F6',

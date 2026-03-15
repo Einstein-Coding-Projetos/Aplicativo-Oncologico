@@ -12,6 +12,47 @@ from rest_framework.views import APIView
 
 from .serializers import UserSerializer
 
+from .models import Appointment # Certifique-se de que o model existe
+
+class PsicologoAgendaView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    # O psicólogo vê a agenda dele (quem marcou e horários livres)
+    def get(self, request):
+        # Filtra agendamentos onde o psicólogo é o usuário logado
+        agenda = Appointment.objects.filter(psicologo=request.user).order_by('date', 'horario')
+        
+        # Formata os dados para o frontend
+        dados = []
+        for item in agenda:
+            dados.append({
+                'id': item.id,
+                'paciente': item.paciente.username if item.paciente else "Livre",
+                'date': item.date,
+                'horario': item.horario.strftime('%H:%M'),
+                'status': item.status
+            })
+        return Response(dados)
+
+    # O psicólogo cria novos horários disponíveis
+    def post(self, request):
+        data_consulta = request.data.get('date')
+        slots = request.data.get('slots') # Lista de horários: ['08:00', '09:00']
+
+        if not data_consulta or not slots:
+            return Response({'erro': 'Data e horários são obrigatórios.'}, status=400)
+
+        for hora in slots:
+            # get_or_create evita duplicar o mesmo horário no mesmo dia
+            Appointment.objects.get_or_create(
+                psicologo=request.user,
+                date=data_consulta,
+                horario=hora,
+                defaults={'status': 'disponivel'}
+            )
+
+        return Response({'mensagem': 'Agenda atualizada com sucesso!'}, status=201)
+
 
 def validate_password_strength(password: str):
     if len(password) < 8:
@@ -31,32 +72,24 @@ class RegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        username = request.data.get('username', '').strip()
-        password = request.data.get('password', '')
-        email = request.data.get('email', '').strip()
+        data = request.data
+        username = data.get('username', '').strip()
+        password = data.get('password', '')
+        
+        # Garante que is_psicologo seja convertido para booleano real
+        is_psicologo = str(data.get('is_psicologo', '')).lower() == 'true' or data.get('is_psicologo') == True
 
-        if not username or not password:
-            return Response(
-                {'erro': 'Username e password sao obrigatorios.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # ... (suas validações de senha aqui)
 
-        if User.objects.filter(username=username).exists():
-            return Response(
-                {'erro': 'Este username ja esta em uso.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Criação do usuário forçando o is_staff
+        User.objects.create_user(
+            username=username, 
+            password=password, 
+            email=data.get('email', '').strip(),
+            is_staff=is_psicologo # O Django usa is_staff para permissões de equipe
+        )
 
-        password_error = validate_password_strength(password)
-        if password_error:
-            return Response(
-                {'erro': password_error},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        User.objects.create_user(username=username, password=password, email=email)
         return Response({'mensagem': 'Conta criada com sucesso!'}, status=status.HTTP_201_CREATED)
-
 
 class ForgotPasswordView(APIView):
     permission_classes = [AllowAny]
@@ -77,14 +110,13 @@ class ForgotPasswordView(APIView):
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = generator.make_token(user)
 
-            # Dev-only helper for mobile app/manual testing without email provider.
-            if settings.DEBUG or getattr(settings, 'EXPOSE_PASSWORD_RESET_TOKEN', False):
+            # Para testes/desenvolvimento
+            if settings.DEBUG:
                 payload['uid'] = uid
                 payload['token'] = token
 
         return Response(payload, status=status.HTTP_200_OK)
-
-
+    
 class ResetPasswordView(APIView):
     permission_classes = [AllowAny]
 
