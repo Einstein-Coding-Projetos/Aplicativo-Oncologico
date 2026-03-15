@@ -5,7 +5,7 @@ export const dadosPsicologos = [
     especialidade: 'Psico-oncologia',
     dias: ['Segunda', 'Quarta'],
     horarios: ['08:00', '10:00', '14:30'],
-    perfil: require('C:\\Users\\ELIANE\\Documents\\Aplicativo-Oncologico\\frontend\\app\\data\\Perfil.png')
+    perfil: require('./Perfil.png')
   },
   {
     id: '2',
@@ -13,8 +13,7 @@ export const dadosPsicologos = [
     especialidade: 'Terapia Familiar',
     dias: ['Terça' , 'Quinta'],
     horarios: ['09:00', '11:00', '15:00', '17:00'],
-    perfil: require('C:\\Users\\ELIANE\\Documents\\Aplicativo-Oncologico\\frontend\\app\\data\\Perfil.png')
-
+    perfil: require('./Perfil.png')
   },
   {
     id: '3',
@@ -22,8 +21,7 @@ export const dadosPsicologos = [
     especialidade: 'Terapia Cognitivo-Comportamental',
     dias: ['Sexta'],
     horarios: ['13:00', '14:00', '15:00'],
-    perfil: require('C:\\Users\\ELIANE\\Documents\\Aplicativo-Oncologico\\frontend\\app\\data\\Perfil.png')
-
+    perfil: require('./Perfil.png')
   },
   {
     id: '4',
@@ -31,7 +29,7 @@ export const dadosPsicologos = [
     especialidade: 'Cuidados Paliativos',
     dias: ['Segunda', 'Terça' , 'Quarta'],
     horarios: ['08:30', '09:30', '10:30'],
-    perfil: require('C:\\Users\\ELIANE\\Documents\\Aplicativo-Oncologico\\frontend\\app\\data\\Perfil.png')
+    perfil: require('./Perfil.png')
   },
   {
     id: '5',
@@ -39,7 +37,7 @@ export const dadosPsicologos = [
     especialidade: 'Psicologia Infantil',
     dias: ['Quinta'],
     horarios: ['14:00', '15:30', '16:45'],
-    perfil: require('C:\\Users\\ELIANE\\Documents\\Aplicativo-Oncologico\\frontend\\app\\data\\Perfil.png')
+    perfil: require('./Perfil.png')
   }
 ];
 

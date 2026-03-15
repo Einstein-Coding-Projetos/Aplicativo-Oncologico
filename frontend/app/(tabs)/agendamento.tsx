@@ -19,8 +19,8 @@ const diasSemanaMap: { [key: string]: number } = {
   'Domingo': 0, 'Segunda': 1, 'Terça': 2, 'Quarta': 3, 'Quinta': 4, 'Sexta': 5, 'Sábado': 6
 };
 
-// Caminho absoluto para a imagem de perfil
-const imagemPerfil = require('C:\\Users\\ELIANE\\Documents\\Aplicativo-Oncologico\\frontend\\app\\data\\Perfil.png');
+// Caminho relativo para a imagem de perfil
+const imagemPerfil = require('../data/Perfil.png');
 
 export default function AgendamentoScreen() {
   const [selectedPsicologo, setSelectedPsicologo] = useState<any | null>(null);
