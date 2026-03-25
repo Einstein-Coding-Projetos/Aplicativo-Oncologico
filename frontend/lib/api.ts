@@ -29,7 +29,7 @@ export type AccountMe = {
   first_name: string;
   last_name: string;
   profile: UserProfile | null;
-  is_staff: boolean; 
+  is_staff: boolean;
 };
 
 type UploadableAsset = {
@@ -170,14 +170,14 @@ const api = {
   },
 
   async register(username: string, password: string, email?: string, is_psicologo: boolean = false): Promise<void> {
-    const res = await fetch(endpoints.register || '/auth/register/', { 
+    const res = await fetch(endpoints.register || '/auth/register/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        username, 
-        password, 
-        email, 
-        is_psicologo 
+      body: JSON.stringify({
+        username,
+        password,
+        email,
+        is_psicologo
       }),
     });
 
@@ -226,14 +226,14 @@ const api = {
     const data = await res.json();
     return data.map((item: any) => ({
       id: item.id.toString(),
-      profissional: item.profissional,
+      profissional: item.psicologo_nome || item.psicologo || "Não informado",
       date: item.date,
       horario: item.horario,
       status: item.status,
     }));
   },
 
-  async createAppointment(payload: { profissional: string; date: string | Date; horario: string }) {
+  async createAppointment(payload: { psicologoId: number; date: string | Date; horario: string }) {
     let dateString = '';
     if (typeof payload.date === 'string') {
       dateString = payload.date.substring(0, 10);
@@ -246,7 +246,11 @@ const api = {
 
     const res = await authFetch(endpoints.appointments, {
       method: 'POST',
-      body: JSON.stringify({ profissional: payload.profissional, date: dateString, horario: payload.horario }),
+      body: JSON.stringify({
+        psicologo: payload.psicologoId, // Alinhado com o models.py
+        date: dateString,
+        horario: payload.horario
+      }),
     });
 
     if (!res.ok) {
@@ -256,7 +260,6 @@ const api = {
 
     return res.json();
   },
-
   async completeAppointment(id: number | string) {
     const res = await authFetch(endpoints.appointmentConcluir(id), { method: 'POST' });
     return res.ok;
@@ -380,7 +383,7 @@ const api = {
   },
 
   async fetchPsicologoAgenda() {
-    const res = await authFetch('/psicologo/agenda/'); 
+    const res = await authFetch('/psicologo/agenda/');
     if (!res.ok) throw new Error('Erro ao carregar agenda');
     return res.json();
   },
@@ -393,7 +396,5 @@ const api = {
     if (!res.ok) throw new Error('Erro ao salvar horários');
     return res.json();
   },
-
 };
-
 export default api;

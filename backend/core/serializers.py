@@ -21,13 +21,14 @@ class AppointmentSerializer(serializers.ModelSerializer):
     horario = NormalizedTimeField(format='%H:%M', input_formats=['%H:%M', '%H:%M:%S'])
 
     def validate(self, attrs):
-        profissional = attrs.get('profissional')
+        # 1. Troque 'profissional' por 'psicologo'
+        psicologo = attrs.get('psicologo') 
         date = attrs.get('date')
         horario = attrs.get('horario')
 
-        if profissional and date and horario:
+        if psicologo and date and horario:
             queryset = Appointment.objects.filter(
-                profissional=profissional,
+                psicologo=psicologo, # 2. Troque aqui também
                 date=date,
                 horario=horario,
             )
@@ -36,16 +37,16 @@ class AppointmentSerializer(serializers.ModelSerializer):
                 queryset = queryset.exclude(pk=instance.pk)
             if queryset.exists():
                 raise serializers.ValidationError(
-                    {'horario': 'Este horario ja esta ocupado para o profissional selecionado.'}
+                    {'horario': 'Este horário já está ocupado para o psicólogo selecionado.'}
                 )
 
         return attrs
 
     class Meta:
         model = Appointment
-        fields = ['id', 'profissional', 'date', 'horario', 'status', 'created_at']
-        read_only_fields = ['id', 'created_at', 'status']
-
+        # 3. Atualize a lista de fields para incluir 'psicologo' e 'paciente'
+        fields = ['id', 'psicologo', 'paciente', 'date', 'horario', 'status'] 
+        read_only_fields = ['id', 'status']
 
 class UserProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)

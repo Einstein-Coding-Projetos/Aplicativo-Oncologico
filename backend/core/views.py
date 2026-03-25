@@ -31,8 +31,8 @@ def formatar_relato(relato, hoje):
     return {
         "id": relato.id,
         "titulo": relato.titulo,
-        "subtitulo": relato.subtitulo,
-        "conteudo": relato.texto,
+        "subtitulo": "", # Como não tem subtitulo no model, deixe vazio ou remova
+        "conteudo": relato.texto, # Aqui mapeia 'texto' do model para 'conteudo' do JSON
         "fonte": getattr(relato, "fonte", None),
         "data": str(hoje),
     }

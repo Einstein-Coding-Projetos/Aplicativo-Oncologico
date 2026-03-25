@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import RelatoCaso
+from .models import RelatoCaso, Appointment # Adicione o Appointment aqui
 
-admin.site.register(RelatoCaso) # Faz com que o modelo RelatoCaso apareça no painel administrativo
+admin.site.register(RelatoCaso)
 
+@admin.register(Appointment)
+class AppointmentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'psicologo', 'paciente', 'date', 'horario', 'status')
+    list_filter = ('status', 'date')
