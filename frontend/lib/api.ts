@@ -379,6 +379,26 @@ const api = {
     }
     return res.json();
   },
+
+  async createDisponibilidade(payload: { data: string; horario: string }) {
+    const res = await authFetch('/api/disponibilidades/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Erro ao salvar disponibilidade');
+    return res.json();
+  },
+
+  async fetchMinhasDisponibilidades() {
+    const res = await authFetch('/api/disponibilidades/');
+    if (!res.ok) throw new Error('Erro ao buscar horários');
+    return res.json();
+  },
+
+  async deleteDisponibilidade(id: number) {
+    const res = await authFetch(`/api/disponibilidades/${id}/`, { method: 'DELETE' });
+    return res.ok;
+  },
 };
 
 export default api;

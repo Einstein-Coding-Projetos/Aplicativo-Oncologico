@@ -1,17 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
+import React, { useEffect, useState } from 'react'; // Adicionado useEffect e useState
 import { Platform, StyleSheet, View } from 'react-native';
 import DailyCheckinFab from '../../components/DailyCheckinFab';
 import { HapticTab } from '../../components/haptic-tab';
 import { IconSymbol } from '../../components/ui/icon-symbol';
+import api, { UserProfile } from '../../lib/api'; // Importação da sua API
 
 const activeTint = '#EAF9FF';
 const inactiveTint = 'rgba(202, 219, 245, 0.72)';
 
 function GlassTabBackground() {
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    // O pointerEvents="none" faz com que o toque "atravesse" o fundo e chegue nos botões
+    <View 
+      style={[StyleSheet.absoluteFill, { zIndex: -1 }]} 
+      pointerEvents="none"
+    >
       <BlurView intensity={70} tint="dark" style={styles.blurLayer} />
       <View style={styles.glowLayer} />
     </View>
@@ -19,6 +25,27 @@ function GlassTabBackground() {
 }
 
 export default function TabsLayout() {
+  // Estado para armazenar o perfil e decidir quais abas mostrar
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+  const checkUser = async () => {
+    try {
+      // Verifica se existe um token antes de chamar a API
+      const hasToken = await api.isAuthenticated(); 
+      if (hasToken) {
+        const userProfile = await api.fetchUserProfile();
+        setProfile(userProfile);
+      }
+    } catch (error) {
+      // Se der erro, apenas mantém o perfil como null e não trava o app
+      setProfile(null);
+    }
+  };
+
+  checkUser();
+}, []);
+
   return (
     <View className="flex-1 bg-[#070F21]">
       <Tabs
@@ -58,11 +85,25 @@ export default function TabsLayout() {
           }}
         />
 
+        {/* Aba de Agendamento (Paciente): Escondida se for Psicólogo */}
         <Tabs.Screen
           name="agendamento"
           options={{
             title: 'Agenda',
             tabBarIcon: ({ color, size }) => <Ionicons name="calendar" color={color} size={size} />,
+            // Se for psicólogo, escondemos o item da barra
+            tabBarItemStyle: profile?.user_type === 'psychologist' ? { display: 'none' } : styles.tabItem,
+          }}
+        />
+
+        {/* NOVA ABA: Gestão de Horários (Psicólogo) */}
+        <Tabs.Screen
+          name="agenda_psicologo"
+          options={{
+            title: 'Minha Agenda',
+            tabBarIcon: ({ color, size }) => <Ionicons name="construct" color={color} size={size} />,
+            // Se for paciente (ou nulo), escondemos o item da barra
+            tabBarItemStyle: profile?.user_type !== 'psychologist' ? { display: 'none' } : styles.tabItem,
           }}
         />
 
@@ -89,6 +130,7 @@ const styles = StyleSheet.create({
     right: 18,
     bottom: 18,
     height: 84,
+    zIndex: 10,
     paddingBottom: 12,
     paddingTop: 12,
     paddingHorizontal: 8,
